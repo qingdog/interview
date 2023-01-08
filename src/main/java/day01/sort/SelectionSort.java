@@ -7,7 +7,8 @@ import static day01.sort.Utils.swap;
 public class SelectionSort {
 
     public static void main(String[] args) {
-        int[] a = {18,23, 19, 9, 23, 15};
+//        int[] a = {18,23, 19, 9, 23, 15};
+        int[] a = {5, 3, 7, 2, 9, 8, 1, 4, 21,22,35,11,6};
         selection(a);
     }
 
@@ -24,6 +25,20 @@ public class SelectionSort {
                 swap(a, s, i);
             }
             System.out.println(Arrays.toString(a));
+        }
+    }
+
+    public static void selection2(int[] a){
+        for(int i = 0;i<a.length -1;i++){
+            int s = i;
+            for(int j = i+1;j<a.length;j++){
+                if (a[s] > a[j]){
+                    s = j;
+                }
+            }
+            if (s != i) {
+                swap(a,s,i);
+            }
         }
     }
 }

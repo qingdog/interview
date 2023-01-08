@@ -5,7 +5,8 @@ import java.util.Arrays;
 public class InsertSort {
     public static void main(String[] args) {
         int[] a = {7, 5, 19, 8, 4, 1};
-        insert(a);
+//        insert(a);
+        insert2(a);
     }
 
     // 修改了代码与希尔排序一致
@@ -24,6 +25,24 @@ public class InsertSort {
                 }
             }
             a[j] = t;
+            System.out.println(Arrays.toString(a) + " " + j);
+        }
+    }
+
+    public static void insert2(int[] a){
+        for (int i = 1; i< a.length; i++) {
+            int in = a[i];
+            int j;
+            for (j = i; j >= 1; j--) {
+                if (in < a[j-1]) {
+                    // 交换（插入）
+                    a[j] = a[j-1];
+                } else {
+                    // 稳定
+                    break;
+                }
+            }
+            a[j] = in;
             System.out.println(Arrays.toString(a) + " " + j);
         }
     }
