@@ -41,4 +41,17 @@ public class QuickSort2 {
         System.out.println(Arrays.toString(a) + " j=" + j);
         return j;
     }
+
+    public static int partition2(int a[],int l, int h){
+        int i = l, j = h;
+        while (i < j) {
+            while (i < j && a[j]>a[h])
+                j--;
+            while (i < j && a[i]<=a[h])
+                i++;
+            swap(a, i, j);
+        }
+        swap(a, h, i);
+        return i;
+    };
 }
