@@ -54,4 +54,13 @@ public class QuickSort2 {
         swap(a, h, i);
         return i;
     };
+
+    public static void quick2(int a[],int l, int h) {
+        if (l >= h){
+            return;
+        }
+        int partition2 = partition2(a, l, h);
+        quick2(a,partition2+1,h);
+        quick2(a, l ,partition2-1);
+    }
 }
