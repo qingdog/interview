@@ -51,8 +51,8 @@ public class QuickSort2 {
                 i++;
             swap(a, i, j);
         }
-        swap(a, h, i);
-        return i;
+        swap(a, h, j);
+        return j;
     };
 
     public static void quick2(int a[],int l, int h) {
