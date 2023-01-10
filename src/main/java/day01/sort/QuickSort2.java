@@ -23,6 +23,7 @@ public class QuickSort2 {
     }
 
     private static int partition(int[] a, int l, int h) {
+        // pivot value
         int pv = a[l];
         int i = l;
         int j = h;
@@ -45,9 +46,9 @@ public class QuickSort2 {
     public static int partition2(int a[],int l, int h){
         int i = l, j = h;
         while (i < j) {
-            while (i < j && a[j]>a[h])
+            while (i < j && a[j] > a[h])
                 j--;
-            while (i < j && a[i]<=a[h])
+            while (i < j && a[i] <= a[h])
                 i++;
             swap(a, i, j);
         }
@@ -56,7 +57,7 @@ public class QuickSort2 {
     };
 
     public static void quick2(int a[],int l, int h) {
-        if (l >= h){
+        if (l >= h) {
             return;
         }
         int partition2 = partition2(a, l, h);

@@ -32,8 +32,8 @@ public class InsertSort {
     public static void insert2(int[] a){
         for (int i = 1; i< a.length; i++) {
             int in = a[i];
-            int j;
-            for (j = i; j >= 1; j--) {
+            int j = i;
+            for (; j >= 1; j--) {
                 if (in < a[j-1]) {
                     // 交换（插入）
                     a[j] = a[j-1];

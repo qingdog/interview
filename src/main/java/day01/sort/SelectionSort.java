@@ -15,7 +15,7 @@ public class SelectionSort {
     private static void selection(int[] a) {
         for (int i = 0; i < a.length - 1; i++) {
             // i 代表每轮选择最小元素要交换到的目标索引
-            int s = i; // 代表最小元素的索引
+            int s =i; // 代表最小元素的索引
             for (int j = i + 1; j < a.length; j++) {
                 if (a[s] > a[j]) { // j 元素比 s 元素还要小, 更新 s
                     s = j;
