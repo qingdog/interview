@@ -613,7 +613,7 @@ Fail-Fast 与 Fail-Safe
 
 * 首先，计算对象的 hashCode()
 * 再进行调用 HashMap 的 hash() 方法进行二次哈希
-  * 二次 hash() （hashcode左移16位 再和hashcode进行异或）是为了综合高位数据，让哈希分布更为均匀
+  * 二次 hash() （hashcode无符号右移16位 再和hashcode进行异或）是为了综合高位数据，让哈希分布更为均匀
 * 最后 按位与&(capacity – 1) 得到索引
 
 **数组容量为何是 2 的 n 次幂**
