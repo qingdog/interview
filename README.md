@@ -858,8 +858,8 @@ public class Singleton1 implements Serializable {
 ```
 
 * 创建私有构造方法
-* 创建静态成员变量调用构造方法初始化
-* 创建公共构造方法返回唯一实例
+* 增加静态常量调用构造方法初始化（饿汉式）
+* 创建公共静态方法返回唯一实例（getInstance）
 
 * 构造方法抛出异常是防止反射破坏单例
 * `readResolve()` 是防止反序列化破坏单例
