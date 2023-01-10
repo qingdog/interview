@@ -856,7 +856,7 @@ public class Singleton1 implements Serializable {
     }
 }
 ```
-
+### 饿汉式写法
 * 创建私有构造方法
 * 增加静态常量调用构造方法初始化（饿汉式）
 * 创建公共静态方法返回唯一实例（getInstance）
@@ -957,7 +957,11 @@ public class Singleton4 implements Serializable {
 * `INSTANCE = new Singleton4()` 不是原子的，分成 3 步：创建对象、调用构造、给静态变量赋值，其中后两步可能被指令重排序优化，变成先赋值、再调用构造
 * 如果线程1 先执行了赋值，线程2 执行到第一个 `INSTANCE == null` 时发现 INSTANCE 已经不为 null，此时就会返回一个未完全构造的对象
 
+### volatile加给懒汉式
+* 赋值语句后加上一个内存屏障，阻止其他赋值语句（构造方法赋值指令）越过。防止cpu执行代码指令的重排序的作用。
 
+**饿汉式**
+* java虚拟机jvm在初始化阶段保证静态代码块的线程安全
 
 **内部类懒汉式**
 
@@ -981,14 +985,22 @@ public class Singleton5 implements Serializable {
 }
 ```
 
-* 避免了双检锁的缺点
+避免了双检锁的缺点
 
 
 
-**JDK 中单例的体现**
+### JDK 中单例的体现
 
-* Runtime 体现了饿汉式单例
-* Console 体现了双检锁懒汉式单例
+* java.lang.Runtime 体现了饿汉式单例
+* java.lang.System.Console 体现了双检锁懒汉式单例
+
+
 * Collections 中的 EmptyNavigableSet 内部类懒汉式单例
-* ReverseComparator.REVERSE_ORDER 内部类懒汉式单例
-* Comparators.NaturalOrderComparator.INSTANCE 枚举饿汉式单例
+  * java.util.collections
+  * emptyNavigableset
+  * emptyIterator
+  * emptyListIterator（双向迭代器）
+  * EmptyEnumeration
+* ReverseComparator.REVERSE_ORDER（反向比较器）
+
+* Comparators.NaturalOrderComparator.INSTANCE 枚举饿汉式单例（自然顺序比较器）
