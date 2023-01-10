@@ -800,6 +800,7 @@ public class HashMapMutableKey {
   * 即 $h≪5  -h$
   
 **默认对象计算哈希值**
+
   在 Java 8 中，Object 类中的 hashCode 方法默认实现是使用了一种叫做 "System.identityHashCode" 的方法来计算对象的哈希值。
 这种方法使用了对象的内存地址来计算哈希值，因此对于不同的对象，即使它们的属性值相同，它们的哈希值也是不同的。
 
