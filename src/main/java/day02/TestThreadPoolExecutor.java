@@ -1,5 +1,6 @@
 package day02;
 
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
 import java.lang.reflect.Field;
@@ -17,6 +18,7 @@ public class TestThreadPoolExecutor {
 
     public static void main(String[] args) throws InterruptedException {
         AtomicInteger c = new AtomicInteger(1);
+        // 数组阻塞队列
         ArrayBlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(2);
         ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
                 2,
@@ -26,6 +28,39 @@ public class TestThreadPoolExecutor {
                 queue,
                 r -> new Thread(r, "myThread" + c.getAndIncrement()),
                 new ThreadPoolExecutor.DiscardOldestPolicy());
+        Thread thread = new Thread("myThread" + c.getAndIncrement());
+
+        // Thread(Runnable target, String name)
+        Runnable rr = () -> {};
+
+        // 错误的写法，传入的参数Runnable r没有起到作用。实现该接口时应该使用方法里的固定的参数（Runnable r）实现约定的抽象方法（返回Thread对象）
+        ThreadFactory threadFactory1 = r -> new Thread(() -> {},"");
+        // 同样是错误的
+        ThreadFactory threadFactory11 = r -> new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println();
+            }
+        }, "");
+
+
+        ThreadFactory threadFactory2 = r ->  {int  i = 0;return new Thread(r, "");};
+        ThreadFactory threadFactory22 = new ThreadFactory() {
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                return new Thread(r ,"");
+            }
+        };
+
+
+        Thread thread1 = new Thread("");
+        ThreadFactory threadFactory3 = r -> new Thread("");
+
+
+
+        // Thread(Runnable target, String name) {
+        Thread t2 = new Thread(() -> {logger1.debug("before waiting"); },"");
+
         showState(queue, threadPool);
         threadPool.submit(new MyTask("1", 3600000));
         showState(queue, threadPool);
