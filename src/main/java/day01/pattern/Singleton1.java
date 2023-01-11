@@ -24,4 +24,5 @@ public class Singleton1 implements Serializable {
     public Object readResolve() {
         return INSTANCE;
     }
+
 }

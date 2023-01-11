@@ -954,6 +954,7 @@ public class Singleton4 implements Serializable {
 
 为何必须加 volatile：
 
+* 创建对象生成唯一实例时不是原子的
 * `INSTANCE = new Singleton4()` 不是原子的，分成 3 步：创建对象、调用构造、给静态变量赋值，其中后两步可能被指令重排序优化，变成先赋值、再调用构造
 * 如果线程1 先执行了赋值，线程2 执行到第一个 `INSTANCE == null` 时发现 INSTANCE 已经不为 null，此时就会返回一个未完全构造的对象
 
@@ -995,12 +996,12 @@ public class Singleton5 implements Serializable {
 * java.lang.System.Console 体现了双检锁懒汉式单例
 
 
-* Collections 中的 EmptyNavigableSet 内部类懒汉式单例
-  * java.util.collections
-  * emptyNavigableset
-  * emptyIterator
-  * emptyListIterator（双向迭代器）
+* java.util.Collections 中的 EmptyNavigableSet 内部类懒汉式单例
+  * EmptyNavigableset
+  * EmptyIterator
+  * EmptyListIterator（双向迭代器）
   * EmptyEnumeration
 * ReverseComparator.REVERSE_ORDER（反向比较器）
 
+* 饿汉式EmptySet\EmptyList\EmptyMap
 * Comparators.NaturalOrderComparator.INSTANCE 枚举饿汉式单例（自然顺序比较器）

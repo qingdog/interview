@@ -11,6 +11,12 @@ public class QuickSort2 {
         int[] a = {5, 3, 7, 2, 9, 8, 1, 4};
         System.out.println(Arrays.toString(a));
         quick(a, 0, a.length - 1);
+//                [5, 3, 7, 2, 9, 8, 1, 4]
+//                [1, 3, 4, 2, 5, 8, 9, 7] j=4
+//                [1, 3, 4, 2, 5, 8, 9, 7] j=0
+//                [1, 2, 3, 4, 5, 8, 9, 7] j=2
+//                [1, 2, 3, 4, 5, 7, 8, 9] j=6
+//        int p = partition(a, 0, a.length - 1);
     }
 
     private static void quick(int[] a, int l, int h) {
@@ -27,6 +33,7 @@ public class QuickSort2 {
         int pv = a[l];
         int i = l;
         int j = h;
+        // i != j
         while (i < j) {
             // j 从右找小的
             while (i < j && a[j] > pv) {
@@ -45,7 +52,7 @@ public class QuickSort2 {
 
     public static int partition2(int a[],int l, int h){
         int i = l, j = h;
-        while (i < j) {
+        while (i != j) {
             while (i < j && a[j] > a[h])
                 j--;
             while (i < j && a[i] <= a[h])
