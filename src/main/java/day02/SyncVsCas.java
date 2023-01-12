@@ -6,6 +6,7 @@ package day02;
 //jdk8
 import sun.misc.Unsafe;
 
+
 // --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
 public class SyncVsCas {
     static final Unsafe U = Unsafe.getUnsafe();
