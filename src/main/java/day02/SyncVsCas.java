@@ -9,10 +9,14 @@ import sun.misc.Unsafe;
 // --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
 public class SyncVsCas {
     static final Unsafe U = Unsafe.getUnsafe();
+    // CAS 操作需要知道要操作的字段的内存地址
     /*static final long BALANCE = U.objectFieldOffset(Account.class, "balance");
+    // 在指定的类中查找指定的字段，并返回该字段在内存中的偏移量
+    Unsafe.getUnsafe().objectFieldOffset(Account.class, "balance")
 
     static class Account {
-        volatile int balance = 10;
+        // 进行 CAS 操作时通常需要加 volatile 修饰变量，保证该字段的可见性和有序性。
+        volatile int balance = 10; // 余额
     }
 
     private static void showResult(Account account, Thread t1, Thread t2) {
@@ -49,9 +53,11 @@ public class SyncVsCas {
 
     public static void cas(Account account) {
         Thread t1 = new Thread(() -> {
+            // 乐观锁
             while (true) {
                 int o = account.balance;
                 int n = o - 5;
+                // 比较和设置CAS
                 if (U.compareAndSetInt(account, BALANCE, o, n)) {
                     break;
                 }
