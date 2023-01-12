@@ -8,6 +8,8 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
+import java.util.function.IntFunction;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -145,7 +147,11 @@ public class TestReentrantLock {
                 all.add(String.format("| waiting queue [%s] %s", entry.getKey(), waitingInfo));
             }
             int maxLength = all.stream().map(String::length).max(Comparator.naturalOrder()).orElse(100);
-            Stream<Integer> integerStream = all.stream().map(s -> s.length());
+            
+            // 返回一个流，该流可以用于对集合的元素进行各种操作，如过滤、映射、排序、聚合等。
+            Stream<String> stream = new ArrayList<String>().stream();
+            // 新的流中就是所有字符串的长度
+            Stream<Integer> integerStream = new ArrayList<String>().stream().map(s -> s.length());
 
             Stream<Integer> integerStream2 = all.stream().map(new Function<String, Integer>() {
                 @Override
@@ -153,7 +159,36 @@ public class TestReentrantLock {
                     return s.length();
                 }
             });
-            Integer integer = integerStream.max(Comparator.naturalOrder()).orElse(100);
+            ArrayList<String> strings = new ArrayList<>();
+            strings.add("s1");
+            // Optional<T>是java8提供的一种可能为空的容器， 如果返回的是空集合max() 的话返回的就是一个空的Optional对象。
+            Optional<Integer> max = strings.stream().map(s -> s.length()).max(Comparator.naturalOrder());
+            Integer integer1 = max.get();
+
+            Integer integer = new ArrayList<String>().stream().map(s -> s.length()).max(Comparator.naturalOrder()).orElse(100);
+
+            IntStream range = IntStream.range(0, 10);
+            int[] ints = IntStream.range(0, 10).toArray();
+
+            // boxed() 方法将一个基本类型的流转换为对应的包装类型流，在这里是将 IntStream 转换为 Stream<Integer>，
+            Stream<Integer> boxed = IntStream.range(0, 10).boxed();
+            Integer[] integers = IntStream.range(0, 10).boxed().toArray(new IntFunction<Integer[]>() {
+                @Override
+                public Integer[] apply(int value) {
+                    return new Integer[]{value};
+                }
+            });
+
+            Integer[] integerArray = IntStream.range(0, 10).boxed().toArray(i -> new Integer[i]);
+            Integer[] integerArray2 = IntStream.range(0, 10).boxed().toArray(Integer[]::new);
+
+            // 它会接受一个IntFunction<R>类型的函数作为参数，这个函数会把原来的int类型的元素映射为一个新的对象类型的元素，并返回一个新的 Stream<R>类型的流。
+            // 每个元素都会被转换成一个字符串，主要是为了把基本类型的流转换成对象流。
+            Stream<String> stringStream = IntStream.range(0, 10).mapToObj(i -> " ");
+
+            // 收集
+            String collect = IntStream.range(0, 10).mapToObj(i -> " ").collect(Collectors.joining());
+            List<String> collect2 = IntStream.range(0, 10).mapToObj(i -> " ").collect(Collectors.toList());
 
             for (String s : all) {
                 sb.append(s);

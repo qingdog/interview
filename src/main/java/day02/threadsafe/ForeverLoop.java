@@ -4,7 +4,7 @@ package day02.threadsafe;
 import static day02.LoggerUtils.get;
 
 // 可见性例子
-// -Xint
+// -Xint（jvm参数）
 public class ForeverLoop {
     static volatile boolean stop = false;
 
