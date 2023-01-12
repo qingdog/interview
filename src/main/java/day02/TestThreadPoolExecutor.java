@@ -37,7 +37,7 @@ public class TestThreadPoolExecutor {
         // 声明具体接口类型 确定lambda表达式所表示的具体抽象方法
         Runnable rr = () -> {};
 
-        // 错误的写法，传入的参数Runnable r没有起到作用。实现该接口时应该使用方法里的固定的参数（Runnable r）实现约定的抽象方法（返回Thread对象）
+        // 错误的写法，传入的参数Runnable r没有起到任何作用。实现该接口时应该使用方法里的固定的参数（Runnable r）实现约定的抽象方法（返回Thread对象）
         ThreadFactory threadFactory1 = r -> new Thread(() -> {},"");
         // 同样是错误的
         ThreadFactory threadFactory11 = r -> new Thread(new Runnable() {

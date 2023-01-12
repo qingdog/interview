@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -15,8 +16,10 @@ import static day02.LoggerUtils.*;
 
 // --add-opens java.base/java.util.concurrent=ALL-UNNAMED --add-opens java.base/java.util.concurrent.locks=ALL-UNNAMED
 public class TestReentrantLock {
-    static final MyReentrantLock LOCK = new MyReentrantLock(true);
+    //  java.util.concurrent.locks.ReentrantLock可重入锁
+    static final MyReentrantLock LOCK = new MyReentrantLock(true); // 是否为公平锁
 
+    // 让当前线程进入等待队列（单向链表）
     static Condition c1 = LOCK.newCondition("c1");
     static Condition c2 = LOCK.newCondition("c2");
 
@@ -30,6 +33,7 @@ public class TestReentrantLock {
         System.out.println(LOCK);
         new MyThread(() -> {
             LOCK.lock();
+//            LOCK.unlock();
             get("t").debug("acquire lock...");
         }, "t1").start();
 
@@ -89,8 +93,12 @@ public class TestReentrantLock {
         while (!stop) {
             new Thread(() -> {
                 try {
+                    // 两个参数超时时间和单位，根据构造公平参数fair公平或者非公平竞争锁
+                    // 超时不会进入阻塞队列直接返回false，当前线程无代码启动后会销毁，然后循环再次创建线程创建匿名类实现接口和方法
                     boolean b = LOCK.tryLock(10, TimeUnit.MILLISECONDS);
                     if (b) {
+//                        c1.await();
+//                        c1.signal();
                         System.out.println(Thread.currentThread().getName() + " acquire lock...");
                         stop = true;
                         sleep1s();
@@ -115,6 +123,7 @@ public class TestReentrantLock {
         private final Map<String, Condition> conditions = new HashMap<>();
 
         public MyReentrantLock(boolean fair) {
+            // 若是无参构造方法默认非公平
             super(fair);
         }
 
@@ -136,6 +145,16 @@ public class TestReentrantLock {
                 all.add(String.format("| waiting queue [%s] %s", entry.getKey(), waitingInfo));
             }
             int maxLength = all.stream().map(String::length).max(Comparator.naturalOrder()).orElse(100);
+            Stream<Integer> integerStream = all.stream().map(s -> s.length());
+
+            Stream<Integer> integerStream2 = all.stream().map(new Function<String, Integer>() {
+                @Override
+                public Integer apply(String s) {
+                    return s.length();
+                }
+            });
+            Integer integer = integerStream.max(Comparator.naturalOrder()).orElse(100);
+
             for (String s : all) {
                 sb.append(s);
                 String space = IntStream.range(0, maxLength - s.length() + 7).mapToObj(i -> " ").collect(Collectors.joining(""));
