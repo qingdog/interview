@@ -1,11 +1,13 @@
 package day01.pattern;
 
 import java.io.Serializable;
+import java.util.concurrent.ConcurrentHashMap;
 
 // 3. 懒汉式单例
 public class Singleton3 implements Serializable {
     private Singleton3() {
         System.out.println("private Singleton3()");
+        new ConcurrentHashMap<>();
     }
 
     private static Singleton3 INSTANCE = null;
