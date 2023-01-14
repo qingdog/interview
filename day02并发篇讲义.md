@@ -348,6 +348,8 @@ ConcurrentHashMap(int initialCapacity, float loadFactor, int concurrencyLevel)
 
 * ThreadLocal 可以实现【资源对象】的线程隔离，让每个线程各用各的【资源对象】，避免争用引发的线程安全问题
 * ThreadLocal 同时实现了线程内的资源共享
+*
+* ThreadLocal不同线程间隔离，同一个线程共享变量。
 
 **原理**
 
