@@ -98,6 +98,15 @@
                     <!-- jdk-8以上版本不能使用jdk.internal.misc.Unsafe报错解决 -->
                     <!-- -按模块重写编译器参数-add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -->
                     <!--<compilerArgument>&#45;&#45;add-exports=java.base/jdk.internal.misc=ALL-UNNAMED</compilerArgument>-->
+                    <!--day03-->
+                    <!--<compilerArgs>
+                        <arg>&#45;&#45;add-exports</arg>
+                        <arg>java.base/jdk.internal.loader=ALL-UNNAMED</arg>
+                        <arg>&#45;&#45;add-exports</arg>
+                        <arg>java.base/jdk.internal.misc=ALL-UNNAMED</arg>
+                        <arg>&#45;&#45;add-exports</arg>
+                        <arg>java.base/jdk.internal.ref=ALL-UNNAMED</arg>
+                    </compilerArgs>-->
                 </configuration>
             </plugin>
             <plugin>
