@@ -267,6 +267,25 @@ System.out.println(Arrays.toString(cards));
 > *更形象的描述请参考：insertion_sort.html*
 
 **算法实现**
+```java
+public static void insert2(int[] a){
+    for (int i = 1; i< a.length; i++) {
+        int in = a[i];
+        int j = i;
+        for (; j >= 1; j--) {
+            if (in < a[j-1]) {
+            // 交换（插入）
+            a[j] = a[j-1];
+            } else {
+            // 稳定
+            break;
+            }
+        }
+        a[j] = in;
+        System.out.println(Arrays.toString(a) + " " + j);
+    }
+}
+```
 
 ```java
 // 修改了代码与希尔排序一致
