@@ -274,11 +274,11 @@ public static void insert2(int[] a){
         int j = i;
         for (; j >= 1; j--) {
             if (in < a[j-1]) {
-            // 交换（插入）
-            a[j] = a[j-1];
+                // 交换（插入）
+                a[j] = a[j-1];
             } else {
-            // 稳定
-            break;
+                // 稳定
+                break;
             }
         }
         a[j] = in;
