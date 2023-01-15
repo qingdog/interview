@@ -288,23 +288,23 @@ GC 要点：
 
 1. 起始的三个对象还未处理完成，用灰色表示
 
-<img/day03 src="img/day03/image-20210831215016566.png" alt="image-20210831215016566" style="zoom:50%;" />
+<img src="img/day03/image-20210831215016566.png" alt="image-20210831215016566" style="zoom:50%;" />
 
 2. 该对象的引用已经处理完成，用黑色表示，黑色引用的对象变为灰色
 
-<img/day03 src="img/day03/image-20210831215033510.png" alt="image-20210831215033510" style="zoom:50%;" />
+<img src="img/day03/image-20210831215033510.png" alt="image-20210831215033510" style="zoom:50%;" />
 
 3. 依次类推
 
-<img/day03 src="img/day03/image-20210831215105280.png" alt="image-20210831215105280" style="zoom:50%;" />
+<img src="img/day03/image-20210831215105280.png" alt="image-20210831215105280" style="zoom:50%;" />
 
 4. 沿着引用链都标记了一遍
 
-<img/day03 src="img/day03/image-20210831215146276.png" alt="image-20210831215146276" style="zoom:50%;" />
+<img src="img/day03/image-20210831215146276.png" alt="image-20210831215146276" style="zoom:50%;" />
 
 5. 最后为标记的白色对象，即为垃圾
 
-<img/day03 src="img/day03/image-20210831215158311.png" alt="image-20210831215158311" style="zoom:50%;" />
+<img src="img/day03/image-20210831215158311.png" alt="image-20210831215158311" style="zoom:50%;" />
 
 **并发漏标问题**
 
@@ -312,19 +312,19 @@ GC 要点：
 
 1. 如图所示标记工作尚未完成
 
-<img/day03 src="img/day03/image-20210831215846876.png" alt="image-20210831215846876" style="zoom:50%;" />
+<img src="img/day03/image-20210831215846876.png" alt="image-20210831215846876" style="zoom:50%;" />
 
 2. 用户线程同时在工作，断开了第一层 3、4 两个对象之间的引用，这时对于正在处理 3 号对象的垃圾回收线程来讲，它会将 4 号对象当做是白色垃圾
 
-<img/day03 src="img/day03/image-20210831215904073.png" alt="image-20210831215904073" style="zoom:50%;" />
+<img src="img/day03/image-20210831215904073.png" alt="image-20210831215904073" style="zoom:50%;" />
 
 3. 但如果其他用户线程又建立了 2、4 两个对象的引用，这时因为 2 号对象是黑色已处理对象了，因此垃圾回收线程不会察觉到这个引用关系的变化，从而产生了漏标
 
-<img/day03 src="img/day03/image-20210831215919493.png" alt="image-20210831215919493" style="zoom:50%;" />
+<img src="img/day03/image-20210831215919493.png" alt="image-20210831215919493" style="zoom:50%;" />
 
 4. 如果用户线程让黑色对象引用了一个新增对象，一样会存在漏标问题
 
-<img/day03 src="img/day03/image-20210831220004062.png" alt="image-20210831220004062" style="zoom:50%;" />
+<img src="img/day03/image-20210831220004062.png" alt="image-20210831220004062" style="zoom:50%;" />
 
 因此对于**并发标记**而言，必须解决漏标问题，也就是要记录标记过程中的变化。有两种解决方法：
 
@@ -367,53 +367,53 @@ GC 要点：
 
 1. 初始时，所有区域都处于空闲状态
 
-<img/day03 src="img/day03/image-20210831222639754.png" alt="image-20210831222639754" style="zoom:50%;" />
+<img src="img/day03/image-20210831222639754.png" alt="image-20210831222639754" style="zoom:50%;" />
 
 2. 创建了一些对象，挑出一些空闲区域作为伊甸园区存储这些对象
 
-<img/day03 src="img/day03/image-20210831222653802.png" alt="image-20210831222653802" style="zoom:50%;" />
+<img src="img/day03/image-20210831222653802.png" alt="image-20210831222653802" style="zoom:50%;" />
 
 3. 当伊甸园需要垃圾回收时，挑出一个空闲区域作为幸存区，用复制算法复制存活对象，需要暂停用户线程
 
-<img/day03 src="img/day03/image-20210831222705814.png" alt="image-20210831222705814" style="zoom:50%;" />
+<img src="img/day03/image-20210831222705814.png" alt="image-20210831222705814" style="zoom:50%;" />
 
 4. 复制完成，将之前的伊甸园内存释放
 
-<img/day03 src="img/day03/image-20210831222724999.png" alt="image-20210831222724999" style="zoom:50%;" />
+<img src="img/day03/image-20210831222724999.png" alt="image-20210831222724999" style="zoom:50%;" />
 
 5. 随着时间流逝，伊甸园的内存又有不足
 
-<img/day03 src="img/day03/image-20210831222737928.png" alt="image-20210831222737928" style="zoom:50%;" />
+<img src="img/day03/image-20210831222737928.png" alt="image-20210831222737928" style="zoom:50%;" />
 
 6. 将伊甸园以及之前幸存区中的存活对象，采用复制算法，复制到新的幸存区，其中较老对象晋升至老年代
 
-<img/day03 src="img/day03/image-20210831222752787.png" alt="image-20210831222752787" style="zoom:50%;" />
+<img src="img/day03/image-20210831222752787.png" alt="image-20210831222752787" style="zoom:50%;" />
 
 7. 释放伊甸园以及之前幸存区的内存
 
-<img/day03 src="img/day03/image-20210831222803281.png" alt="image-20210831222803281" style="zoom:50%;" />
+<img src="img/day03/image-20210831222803281.png" alt="image-20210831222803281" style="zoom:50%;" />
 
 **G1 回收阶段 - 并发标记与混合收集**
 
 1. 当老年代占用内存超过阈值后，触发并发标记，这时无需暂停用户线程
 
-<img/day03 src="img/day03/image-20210831222813959.png" alt="image-20210831222813959" style="zoom:50%;" />
+<img src="img/day03/image-20210831222813959.png" alt="image-20210831222813959" style="zoom:50%;" />
 
 2. 并发标记之后，会有重新标记阶段解决漏标问题，此时需要暂停用户线程。这些都完成后就知道了老年代有哪些存活对象，随后进入混合收集阶段。此时不会对所有老年代区域进行回收，而是根据**暂停时间目标**优先回收价值高（存活对象少）的区域（这也是 Gabage First 名称的由来）。
 
-<img/day03 src="img/day03/image-20210831222828104.png" alt="image-20210831222828104" style="zoom:50%;" />
+<img src="img/day03/image-20210831222828104.png" alt="image-20210831222828104" style="zoom:50%;" />
 
 3. 混合收集阶段中，参与复制的有 eden、survivor、old，下图显示了伊甸园和幸存区的存活对象复制
 
-<img/day03 src="img/day03/image-20210831222841096.png" alt="image-20210831222841096" style="zoom:50%;" />
+<img src="img/day03/image-20210831222841096.png" alt="image-20210831222841096" style="zoom:50%;" />
 
 4. 下图显示了老年代和幸存区晋升的存活对象的复制
 
-<img/day03 src="img/day03/image-20210831222859760.png" alt="image-20210831222859760" style="zoom:50%;" />
+<img src="img/day03/image-20210831222859760.png" alt="image-20210831222859760" style="zoom:50%;" />
 
 5. 复制完成，内存得到释放。进入下一轮的新生代回收、并发标记、混合收集
 
-<img/day03 src="img/day03/image-20210831222919182.png" alt="image-20210831222919182" style="zoom:50%;" />
+<img src="img/day03/image-20210831222919182.png" alt="image-20210831222919182" style="zoom:50%;" />
 
 ## 4. 内存溢出
 
