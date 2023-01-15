@@ -547,7 +547,7 @@ GC 要点：
 
 2. 通过 GC Root 的引用链，如果强引用不到该对象，该对象才能被回收
 
-<img/day03 src="img/day03/image-20210901111903574.png" alt="image-20210901111903574" style="zoom:80%;" />
+<img src="img/day03/image-20210901111903574.png" alt="image-20210901111903574" style="zoom:80%;" />
 
 **软引用（SoftReference）**
 
@@ -559,7 +559,7 @@ GC 要点：
 
 4. 典型例子是反射数据
 
-<img/day03 src="img/day03/image-20210901111957328.png" alt="image-20210901111957328" style="zoom:80%;" />
+<img src="img/day03/image-20210901111957328.png" alt="image-20210901111957328" style="zoom:80%;" />
 
 
 
@@ -573,7 +573,7 @@ GC 要点：
 
 4. 典型例子是 ThreadLocalMap 中的 Entry 对象
 
-<img/day03 src="img/day03/image-20210901112107707.png" alt="image-20210901112107707" style="zoom:80%;" />
+<img src="img/day03/image-20210901112107707.png" alt="image-20210901112107707" style="zoom:80%;" />
 
 
 
@@ -585,7 +585,7 @@ GC 要点：
 
 3. 典型例子是 Cleaner 释放 DirectByteBuffer 关联的直接内存
 
-<img/day03 src="img/day03/image-20210901112157901.png" alt="image-20210901112157901" style="zoom:80%;" />
+<img src="img/day03/image-20210901112157901.png" alt="image-20210901112157901" style="zoom:80%;" />
 
 
 
