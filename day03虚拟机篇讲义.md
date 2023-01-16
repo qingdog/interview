@@ -431,6 +431,7 @@ GC 要点：
 
 * 误用线程池导致的内存溢出
   * 参考 day03.TestOomThreadPool
+  * 不要使用线程池内置的方法创建，使用构造方法创建线程池设置七个参数
 ```java
 // -Xmx64m
 // 模拟短信发送超时，但这时仍有大量的任务进入队列
@@ -438,7 +439,7 @@ public class TestOomThreadPool {
     public static void main(String[] args) {
         ExecutorService executor = Executors.newFixedThreadPool(2);
         // new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, 
-            // new LinkedBlockingQueue<Runnable>()); // 队列上限是整数
+            // new LinkedBlockingQueue<Runnable>()); // 队列上限是整数最大值
         LoggerUtils.get().debug("begin...");
         while (true) {
             executor.submit(()->{
@@ -463,6 +464,7 @@ public class Executors {
 ```
 * 查询数据量太大导致的内存溢出
   * 参考 day03.TestOomTooManyObject
+  * 应该使用默认分页查询 或者 条件限制并且limit最大值保底
 ```java
 public class TestOomTooManyObject {
     public static void main(String[] args) {
@@ -488,11 +490,11 @@ public class TestOomTooManyObject {
 ```
 * 动态生成类导致的内存溢出
   * 参考 day03.TestOomTooManyClass
+  * 不能使用静态存活时间长不会回收，自定义类加载器不能卸载，元空间会溢出
 ```java
 // -XX:MaxMetaspaceSize=24m
 // 模拟不断生成类, 但类无法卸载的情况
 public class TestOomTooManyClass {
-//  静态存活不会回收，类加载器不能卸载，元空间会溢出
 //  static GroovyShell shell = new GroovyShell();
 
     public static void main(String[] args) {
