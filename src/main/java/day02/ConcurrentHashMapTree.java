@@ -1,7 +1,10 @@
 package day02;
 
 import javax.swing.tree.TreeNode;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ConcurrentHashMapTree {
@@ -43,5 +46,28 @@ public class ConcurrentHashMapTree {
         Object ooo = table[0];
         map.put("a","");
 
+        // 下面代码打印了123是为什么？
+        WeakHashMap<String, WeakReference<String>> weakHashMap = new WeakHashMap<>();
+        if (weakHashMap.isEmpty()) {
+            String obj = String.valueOf(123);
+            WeakReference<String> weakReference = new WeakReference<>(obj);
+            weakHashMap.put("1", weakReference);
+            obj = null;
+        }
+        System.gc();
+        System.out.println(weakHashMap.get("1").get());
+        System.out.println(weakHashMap.size());
+
+
+        WeakHashMap<Integer, String> map2 = new WeakHashMap<>();
+        Integer key = new Integer(1);
+        String value = "Weak Reference Example";
+        map2.put(key, value);
+        System.out.println("Before GC: " + map2);
+
+        key = null;
+        System.gc();
+        System.out.println(map2.keySet().iterator().hasNext());
+        System.out.println("After GC: " + map2);
     }
 }

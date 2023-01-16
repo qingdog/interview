@@ -431,11 +431,74 @@ GC 要点：
 
 * 误用线程池导致的内存溢出
   * 参考 day03.TestOomThreadPool
+```java
+// -Xmx64m
+// 模拟短信发送超时，但这时仍有大量的任务进入队列
+public class TestOomThreadPool {
+    public static void main(String[] args) {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        LoggerUtils.get().debug("begin...");
+        while (true) {
+            executor.submit(()->{
+                try {
+                    LoggerUtils.get().debug("send sms...");
+                    TimeUnit.SECONDS.sleep(30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+}
+```
 * 查询数据量太大导致的内存溢出
   * 参考 day03.TestOomTooManyObject
+```java
+public class TestOomTooManyObject {
+    public static void main(String[] args) {
+        // 对象本身内存
+        long a = ClassLayout.parseInstance(new Product()).instanceSize();
+        System.out.println(a);
+        // 一个字符串占用内存
+        String name = "联想小新Air14轻薄本 英特尔酷睿i5 14英寸全面屏学生笔记本电脑(i5-1135G7 16G 512G MX450独显 高色域)银";
+        long b = ClassLayout.parseInstance(name).instanceSize();
+        System.out.println(b);
+        String desc = "【全金属全面屏】学生商务办公，全新11代处理器，MX450独显，100%sRGB高色域，指纹识别，快充（更多好货）";
+        long c = ClassLayout.parseInstance(desc).instanceSize();
+        System.out.println(c);
+        System.out.println(16 + name.getBytes(StandardCharsets.UTF_8).length);
+        System.out.println(16 + desc.getBytes(StandardCharsets.UTF_8).length);
+        // 一个对象估算的内存
+        long avg = a + b + c + 16 + name.getBytes(StandardCharsets.UTF_8).length + 16 + desc.getBytes(StandardCharsets.UTF_8).length;
+        System.out.println(avg);
+        // ArrayList 24, Object[] 16 共 40
+        System.out.println((1_000_000 * avg + 40) / 1024 / 1024 + "Mb");
+    }
+}
+```
 * 动态生成类导致的内存溢出
   * 参考 day03.TestOomTooManyClass
+```java
+// -XX:MaxMetaspaceSize=24m
+// 模拟不断生成类, 但类无法卸载的情况
+public class TestOomTooManyClass {
+//  静态存活不会回收，类加载器不能卸载，元空间会溢出
+//  static GroovyShell shell = new GroovyShell();
 
+    public static void main(String[] args) {
+        AtomicInteger c = new AtomicInteger();
+        while (true) {
+            try (FileReader reader = new FileReader("script")) {
+                GroovyShell shell = new GroovyShell();
+                shell.evaluate(reader);
+                System.out.println(c.incrementAndGet());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+```
 
 
 ## 5. 类加载
