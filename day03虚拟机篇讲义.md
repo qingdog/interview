@@ -437,6 +437,8 @@ GC 要点：
 public class TestOomThreadPool {
     public static void main(String[] args) {
         ExecutorService executor = Executors.newFixedThreadPool(2);
+        // new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, 
+            // new LinkedBlockingQueue<Runnable>()); // 队列上限是整数
         LoggerUtils.get().debug("begin...");
         while (true) {
             executor.submit(()->{
@@ -448,6 +450,14 @@ public class TestOomThreadPool {
                 }
             });
         }
+    }
+}
+```
+```java
+public class Executors {
+    public static ExecutorService newCachedThreadPool() {
+        return new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60L, TimeUnit.SECONDS,
+            new SynchronousQueue<Runnable>());
     }
 }
 ```

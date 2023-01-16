@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 public class TestOomThreadPool {
     public static void main(String[] args) {
         ExecutorService executor = Executors.newFixedThreadPool(2);
+        Executors.newCachedThreadPool();
         LoggerUtils.get().debug("begin...");
         while (true) {
             executor.submit(()->{
