@@ -20,9 +20,9 @@ public class TestPhantomReference {
         Object ref;
         while ((ref = queue.poll()) != null) {
             // 语言级别 '8' 不支持 'instanceof' 中的模式 升级到16
-//            if (ref instanceof MyResource resource) {
-//                resource.clean();
-//            }
+            if (ref instanceof MyResource) {
+                ((MyResource)ref).clean();
+            }
         }
     }
 

@@ -573,7 +573,7 @@ public class TestOomTooManyClass {
 | Application ClassLoader | classpath             | 上级为 Extension               |
 | 自定义类加载器          | 自定义                | 上级为 Application             |
 
-* 启动类加载器 rt.jar tools.jar
+* 启动类加载器 rt.jar
 * 扩展类加载器 （高版本换成平台加载器PlatformClassLoader）
 * 应用程序类加载器
 * module-info.class可查看jdk类中所绑定的包名
@@ -660,6 +660,97 @@ public class TestOomTooManyClass {
 
 <img src="img/day03/image-20210901112107707.png" alt="image-20210901112107707" style="zoom:80%;" />
 
+```java
+// 弱引用队列可解决ThreadLocalMap内存泄露，但是成本高不建议使用。
+package day03.reference;
+
+import java.lang.ref.ReferenceQueue;
+import java.lang.ref.WeakReference;
+
+public class TestWeakReference {
+
+    public static void main(String[] args) {
+        MyWeakMap map = new MyWeakMap();
+        map.put(0, new String("a"), "1");
+        // 强引用不会被当前方法gc回收
+        map.put(1, "b", "2");
+        map.put(2, new String("c"), "3");
+        map.put(3, new String("d"), "4");
+        System.out.println(map);
+
+        System.gc();
+        System.out.println(map.get("a"));
+        System.out.println(map.get("b"));
+        System.out.println(map.get("c"));
+        System.out.println(map.get("d"));
+        System.out.println(map);
+        map.clean();
+        System.out.println(map);
+    }
+
+    // 模拟 ThreadLocalMap 的内存泄漏问题以及一种解决方法
+    static class MyWeakMap {
+        // 给ThreadLocalMap增加引用队列，清除value的强引用
+        static ReferenceQueue<Object> queue = new ReferenceQueue<>();
+        static class Entry extends WeakReference<String> {
+            String value;
+
+            public Entry(String key, String value) {
+                super(key, queue);
+                this.value = value;
+            }
+        }
+        // 回收资源
+        public void clean() {
+            Object ref;
+            while ((ref = queue.poll()) != null) {
+                System.out.println(ref);
+                for (int i = 0; i < table.length; i++) {
+                    if(table[i] == ref) {
+                        table[i] = null;
+                    }
+                }
+            }
+        }
+
+        Entry[] table = new Entry[4];
+
+        public void put(int index, String key, String value) {
+            table[index] = new Entry(key, value);
+        }
+
+        public String get(String key) {
+            for (Entry entry : table) {
+                if (entry != null) {
+                    String k = entry.get();
+                    if (k != null && k.equals(key)) {
+                        return entry.value;
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("[");
+            for (Entry entry : table) {
+                if (entry != null) {
+                    String k = entry.get();
+                    sb.append(k).append(":").append(entry.value).append(",");
+                }
+            }
+            if (sb.length() > 1) {
+                sb.deleteCharAt(sb.length() - 1);
+            }
+            sb.append("]");
+            return sb.toString();
+        }
+    }
+}
+
+```
 
 
 **虚引用（PhantomReference）**
@@ -672,16 +763,86 @@ public class TestOomTooManyClass {
 
 <img src="img/day03/image-20210901112157901.png" alt="image-20210901112157901" style="zoom:80%;" />
 
+```java
+public class TestPhantomReference {
+    public static void main(String[] args) throws IOException, InterruptedException {
+        ReferenceQueue<String> queue = new ReferenceQueue<>();// 引用队列
+        List<MyResource> list = new ArrayList<>();
+        list.add(new MyResource(new String("a"), queue));
+        list.add(new MyResource("b", queue));
+        list.add(new MyResource(new String("c"), queue));
 
+        System.gc(); // 垃圾回收
+        Thread.sleep(100);
+        Object ref;
+        // 循环出队
+        while ((ref = queue.poll()) != null) {
+            // 语言级别 '8' 不支持 'instanceof' 中的模式 升级到16
+//            if (ref instanceof MyResource resource) {
+//                resource.clean();
+//            }
+            if (ref instanceof MyResource) {
+                ((MyResource)ref).clean();
+            }
+        }
+    }
 
-
+    static class MyResource extends PhantomReference<String> {
+        public MyResource(String referent, ReferenceQueue<? super String> q) {
+            super(referent, q);
+        }
+        // 释放外部资源的方法
+        public void clean() {
+            LoggerUtils.get().debug("clean");
+        }
+    }
+}
+```
 
 >***代码说明***
 >
 >* day03.reference.TestPhantomReference - 演示虚引用的基本用法
 >* day03.reference.TestWeakReference - 模拟 ThreadLocalMap, 采用引用队列释放 entry 内存
 
+```java
+//import java.lang.ref.Cleaner;
+// 前面讲的弱、虚引用配合引用队列，目的都是为了找到哪些 java 对象被回收，从而进行对它们关联的资源进行进一步清理
+// 为了简化 api 难度，从 java 9 开始引入了 Cleaner 对象
+public class TestCleaner1 {
+    public static void main(String[] args) throws IOException {
+        Cleaner cleaner = Cleaner.create();
 
+        cleaner.register(new MyResource(), ()-> LoggerUtils.get().debug("clean 1"));
+        cleaner.register(new MyResource(), ()-> LoggerUtils.get().debug("clean 2"));
+        cleaner.register(new MyResource(), ()-> LoggerUtils.get().debug("clean 3"));
+        MyResource obj = new MyResource();
+        cleaner.register(obj, ()-> LoggerUtils.get().debug("clean 4"));
+        cleaner.register(new MyResource(), ()-> LoggerUtils.get().debug("clean 5"));
+        cleaner.register(new MyResource(), ()-> LoggerUtils.get().debug("clean 6"));
+
+        System.gc();
+        System.in.read();
+    }
+    static class MyResource {
+    }
+}
+```
+```java
+//import jdk.internal.ref.Cleaner;
+public class TestCleaner2 {
+    public static void main(String[] args) throws IOException {
+        Cleaner cleaner1 = Cleaner.create(new MyResource(), ()-> LoggerUtils.get().debug("clean 1"));
+        Cleaner cleaner2 = Cleaner.create(new MyResource(), ()-> LoggerUtils.get().debug("clean 2"));
+        Cleaner cleaner3 = Cleaner.create(new MyResource(), ()-> LoggerUtils.get().debug("clean 3"));
+        Cleaner cleaner4 = Cleaner.create(new MyResource(), ()-> LoggerUtils.get().debug("clean 4"));
+
+        System.gc();
+        System.in.read();
+    }
+    static class MyResource {
+    }
+}
+```
 
 ## 7. finalize
 
