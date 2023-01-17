@@ -536,7 +536,9 @@ public class TestOomTooManyClass {
    1. 验证 – 验证类是否符合 Class 规范，合法性、安全性检查
    2. 准备 – 为 static 变量分配空间，设置默认值
    3. 解析 – 将常量池的符号引用解析为直接引用
-
+* 超过short最大值32797使用常量池
+* 调用静态引用类型会触发类加载和初始化，静态常量不会。
+* 每一个类都有常量池，其他类未加载时是符号引用，类加载后变成直接引用（拥有具体的内存地址，常量池和类的其他信息都存放到方法区中）。
 3. 初始化
    1. 静态代码块、static 修饰的变量赋值、static final 修饰的引用类型变量赋值，会被合并成一个 `<cinit>` 方法，在初始化时被调用
    2. static final 修饰的基本类型变量赋值，在链接阶段就已完成
@@ -551,7 +553,7 @@ public class TestOomTooManyClass {
 >   * 控制台的 g1regiondetails 命令查看 region 详情
 >   * `scanoops 起始地址 结束地址 对象类型` 可以根据类型查找某个区间内的对象地址
 >   * 控制台的 `inspect 地址` 指令能够查看这个地址对应的对象详情
-> * 使用 javap 命令可以查看 class 字节码
+> * 使用 javap -c -v -p 命令可以查看 class 字节码
 
 
 
@@ -571,7 +573,11 @@ public class TestOomTooManyClass {
 | Application ClassLoader | classpath             | 上级为 Extension               |
 | 自定义类加载器          | 自定义                | 上级为 Application             |
 
-
+* 启动类加载器 rt.jar tools.jar
+* 扩展类加载器 （高版本换成平台加载器PlatformClassLoader）
+* 应用程序类加载器
+* module-info.class可查看jdk类中所绑定的包名
+* java.lang.System绑定包名java.base（该全类名不能再重新创建）
 
 **双亲委派机制**
 
