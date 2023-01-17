@@ -661,7 +661,11 @@ public class TestOomTooManyClass {
 <img src="img/day03/image-20210901112107707.png" alt="image-20210901112107707" style="zoom:80%;" />
 
 ```java
-// 弱引用队列可解决ThreadLocalMap内存泄露，但是成本高不建议使用。
+// 弱引用队列可解决ThreadLocal的ThreadLocalMap内存泄露，但是成本高不建议使用。
+// （一般手动使用remove移除map的value对象，而不是让gc回收）
+// ThreadLocal 可以实现【资源对象】的线程隔离，让每个线程各用各的【资源对象】，避免争用引发的线程安全问题
+// ThreadLocal 同时实现了线程内的资源共享
+// ThreadLocal 不同线程间隔离，同一个线程共享变量。
 package day03.reference;
 
 import java.lang.ref.ReferenceQueue;
