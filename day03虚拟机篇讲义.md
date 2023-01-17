@@ -492,6 +492,7 @@ public class TestOomTooManyObject {
   * 参考 day03.TestOomTooManyClass
   * 不能使用静态存活时间长不会回收，自定义类加载器不能卸载，元空间会溢出
 ```java
+import groovy.lang.GroovyShell;
 // -XX:MaxMetaspaceSize=24m
 // 模拟不断生成类, 但类无法卸载的情况
 public class TestOomTooManyClass {
@@ -763,7 +764,7 @@ public class TestWeakReference {
 
 2. 必须配合引用队列一起使用，当虚引用所引用的对象被回收时，由 Reference Handler 线程将虚引用对象入队，这样就可以知道哪些对象被回收，从而对它们关联的资源做进一步处理
 
-3. 典型例子是 Cleaner 释放 DirectByteBuffer 关联的直接内存
+3. 典型例子是 `jdk.internal.ref.Cleaner` 释放 `java.nio.DirectByteBuffer` 关联的直接内存
 
 <img src="img/day03/image-20210901112157901.png" alt="image-20210901112157901" style="zoom:80%;" />
 
