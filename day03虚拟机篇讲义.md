@@ -537,7 +537,7 @@ public class TestOomTooManyClass {
    2. 准备 – 为 static 变量分配空间，设置默认值
    3. 解析 – 将常量池的符号引用解析为直接引用
 * 超过short最大值32797使用常量池
-* 调用静态引用类型会触发类加载和初始化，静态常量不会。
+* 调用类的静态常量引用类型`static final Object = new Object`、静态引用类型和 *.class类型`Student.class`会触发类加载和初始化，静态常量`static final int`不会。
 * 每一个类都有常量池，其他类未加载时是符号引用，类加载后变成直接引用（拥有具体的内存地址，常量池和类的其他信息都存放到方法区中）。
 3. 初始化
    1. 静态代码块、static 修饰的变量赋值、static final 修饰的引用类型变量赋值，会被合并成一个 `<cinit>` 方法，在初始化时被调用
