@@ -160,7 +160,7 @@ public class TestBeanDefinition {
         System.out.println(Arrays.toString(beanFactory.getBeanDefinitionNames()));
 
         System.out.println("========================> 2) 从配置类获取 ");
-        //          注册 Bean 定义                                Bean 定义生成器        通用 Bean 定义                         获取 Bean 定义
+        //          注册 Bean 定义                      Bean 定义生成器        通用 Bean 定义                         获取 Bean 定义
         beanFactory.registerBeanDefinition("config1", BeanDefinitionBuilder.genericBeanDefinition(Config1.class).getBeanDefinition());
 
         // 配置类后处理器
