@@ -20,7 +20,7 @@ public class TestEnvironment {
         System.out.println("=======================> 仅获取 @Value 值");
         // 限定符注解自动装配候选解析器
         QualifierAnnotationAutowireCandidateResolver resolver = new QualifierAnnotationAutowireCandidateResolver();
-        //                        建议                依赖描述符
+        //                      获取建议值             依赖描述符                      获取声明字段
         Object name = resolver.getSuggestedValue(new DependencyDescriptor(Bean1.class.getDeclaredField("name"), false));
         System.out.println(name);
 
@@ -35,14 +35,16 @@ public class TestEnvironment {
         System.out.println("=======================> 获取 @Value 值, 并解析#{}");
         Object expression = resolver.getSuggestedValue(new DependencyDescriptor(Bean1.class.getDeclaredField("expression"), false));
         System.out.println(expression);
-        String v1 = getEnvironment().resolvePlaceholders(expression.toString());
-        System.out.println(v1);
-        System.out.println(new StandardBeanExpressionResolver().evaluate(v1, new BeanExpressionContext(new DefaultListableBeanFactory(),null)));
+        String resolvePlaceholders = getEnvironment().resolvePlaceholders(expression.toString());
+        System.out.println(resolvePlaceholders);
+        //                    标准bean表达式解析器                                                  Bean 表达式上下文            默认可列出的 Bean 工厂
+        Object evaluate = new StandardBeanExpressionResolver().evaluate(resolvePlaceholders, new BeanExpressionContext(new DefaultListableBeanFactory(), null));
+        System.out.println(evaluate);
     }
 
     private static Environment getEnvironment() throws IOException {
         StandardEnvironment env = new StandardEnvironment();
-                                            // 资源属性来源
+        //  获取属性来源            添加最后一个   资源属性来源
         env.getPropertySources().addLast(new ResourcePropertySource("jdbc", new ClassPathResource("jdbc.properties")));
         return env;
     }
@@ -51,9 +53,11 @@ public class TestEnvironment {
         @Value("hello")
         private String name;
 
-//        @Value("${jdbc.username}")
+
 //        @Value("${JAVA_HOME}")
-        @Value("${Path}") // 系统变量+用户变量
+//        @Value("${Path}") // 系统变量+用户变量
+        @Value("${jdbc.username}")
+//        @Value("class version:${java.class.version}")
         private String javaHome;
 
         @Value("#{'class version:' + '${java.class.version}'}")
