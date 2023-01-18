@@ -884,6 +884,7 @@ public class TestCleaner2 {
 **finalize 缺点**
 
 * 无法保证资源释放：FinalizerThread 是守护线程，代码很有可能没来得及执行完，线程就结束了
+* setDeamon(true)守护线程，其他非守护线程结束了，也会停止执行（不能保证一定会执行完线程的方法）。
 * 无法判断是否发生错误：执行 finalize 方法时，会吞掉任意异常（Throwable）
 * 内存释放不及时：重写了 finalize 方法的对象在第一次被 gc 时，并不能及时释放它占用的内存，因为要等着 FinalizerThread 调用完 finalize，把它从 unfinalized 队列移除后，第二次 gc 时才能真正释放内存
 * 有的文章提到【Finalizer 线程会和我们的主线程进行竞争，不过由于它的优先级较低，获取到的CPU时间较少，因此它永远也赶不上主线程的步伐】这个显然是错误的，FinalizerThread 的优先级较普通线程更高，原因应该是 finalize 串行执行慢等原因综合导致
