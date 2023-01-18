@@ -52,9 +52,9 @@ refresh 是 AbstractApplicationContext 中的一个方法，负责初始化 Appl
 
 * Environment 对象的作用之一是为后续 @Value，值注入时提供键值
 * Environment 分成三个主要部分
-  * systemProperties - 保存 java 环境键值
-  * systemEnvironment - 保存系统环境键值
-  * 自定义 PropertySource - 保存自定义键值，例如来自于 *.properties 文件的键值
+  * systemProperties - 保存 java 环境键值（编码、空格符占位）
+  * systemEnvironment - 保存系统环境键值（JAVAHOME）
+  * 自定义 PropertySource - 保存自定义键值，例如来自于 *.properties 文件的键值（application.properties）
 
 ![image-20210902181639048](img/day04/image-20210902181639048.png)
 
