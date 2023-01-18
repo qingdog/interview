@@ -1,10 +1,10 @@
 <configuration>
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!--<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%highlight([%level]) %d{HH:mm:ss.SSS} %black([%thread]) - %msg %n</pattern>
         </encoder>
-    </appender>
+    </appender>-->
 
     <appender name="boldRed" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -48,13 +48,27 @@
         </encoder>
     </appender>
 
-    <!--    <logger name="org.springframework.beans.factory.annotation.InjectionMetadata" level="TRACE" additivity="false">
-         <appender-ref ref="STDOUT"/>
-     </logger>
+    <appender name="STDOUT" class="ch.qos.logback.classic.sift.SiftingAppender">
+        <discriminator>
+            <key>thread</key>
+            <defaultValue>cyan</defaultValue>
+        </discriminator>
+        <sift>
+            <appender name="thread-${thread}" class="ch.qos.logback.core.ConsoleAppender">
+                <encoder>
+                    <pattern>%highlight([%level]) %d{HH:mm:ss.SSS} %black([%thread]) - %${thread}(%msg) %n</pattern>
+                </encoder>
+            </appender>
+        </sift>
+    </appender>
 
-     <logger name="org.springframework.beans.factory.support.DefaultListableBeanFactory" level="TRACE" additivity="false">
-         <appender-ref ref="STDOUT"/>
-     </logger>-->
+    <logger name="org.springframework.jdbc.datasource.DataSourceTransactionManager" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
+
+    <logger name="day04.tx.app" level="DEBUG" additivity="false">
+        <appender-ref ref="STDOUT"/>
+    </logger>
 
     <logger name="A" level="DEBUG" additivity="false">
         <appender-ref ref="boldRed"/>
@@ -83,12 +97,6 @@
     <logger name="G" level="DEBUG" additivity="false">
         <appender-ref ref="boldWhite"/>
     </logger>
-
-
-    <!--<logger name="org.springframework.beans.factory.support.DefaultListableBeanFactory" level="trace"
-            additivity="false">
-        <appender-ref ref="STDOUT"/>
-    </logger>-->
 
     <root level="INFO">
         <appender-ref ref="STDOUT"/>

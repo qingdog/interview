@@ -43,6 +43,7 @@ public class TestEnvironment {
     }
 
     private static Environment getEnvironment() throws IOException {
+        // 标准环境
         StandardEnvironment env = new StandardEnvironment();
         //  获取属性来源            添加最后一个   资源属性来源
         env.getPropertySources().addLast(new ResourcePropertySource("jdbc", new ClassPathResource("jdbc.properties")));
