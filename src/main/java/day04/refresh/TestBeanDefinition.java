@@ -30,7 +30,7 @@ public class TestBeanDefinition {
 
         // 配置类后处理器
         ConfigurationClassPostProcessor postProcessor = new ConfigurationClassPostProcessor();
-        //            后处理 Bean 定义注册表
+        //            后处理 Bean 定义注册表（bean2）
         postProcessor.postProcessBeanDefinitionRegistry(beanFactory);
         System.out.println(Arrays.toString(beanFactory.getBeanDefinitionNames()));
 
