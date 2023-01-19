@@ -57,6 +57,7 @@ refresh 是 AbstractApplicationContext 中的一个方法，负责初始化 Appl
   * 自定义 PropertySource - 保存自定义键值，例如来自于 *.properties 文件的键值（application.properties）
 
 ![image-20210902181639048](img/day04/image-20210902181639048.png)
+
 ```java
 import org.springframework.beans.factory.annotation.QualifierAnnotationAutowireCandidateResolver;
 import org.springframework.beans.factory.annotation.Value;
@@ -122,7 +123,6 @@ public class TestEnvironment {
         private String expression;
     }
 }
-
 ```
 
 **2. obtainFreshBeanFactory**
@@ -134,6 +134,7 @@ public class TestEnvironment {
 * 所有的 BeanDefinition 会存入 BeanFactory 中的 beanDefinitionMap 集合
 
 ![image-20210902182004819](img/day04/image-20210902182004819.png)
+
 ```java
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -154,9 +155,9 @@ public class TestBeanDefinition {
 
         System.out.println("========================> 1) 从 xml 获取 ");
         // Xml Bean 定义读取器
-        XmlBeanDefinitionReader reader1 = new XmlBeanDefinitionReader(beanFactory);
+        XmlBeanDefinitionReader xmlBeanDefinitionReader = new XmlBeanDefinitionReader(beanFactory);
         //      加载 Bean 定义            类路径资源
-        reader1.loadBeanDefinitions(new ClassPathResource("bd.xml"));
+        xmlBeanDefinitionReader.loadBeanDefinitions(new ClassPathResource("bd.xml"));
         System.out.println(Arrays.toString(beanFactory.getBeanDefinitionNames()));
 
         System.out.println("========================> 2) 从配置类获取 ");
@@ -205,7 +206,7 @@ public class Bean3 {
 
 * 这一步会进一步完善 BeanFactory，为它的各项成员变量赋值
 * beanExpressionResolver 用来解析 SpEL，常见实现为 StandardBeanExpressionResolver
-* propertyEditorRegistrars 会注册类型转换器
+* propertyEditorRegistrars 会注册类型转换器 （转换String类型）
   * 它在这里使用了 ResourceEditorRegistrar 实现类
   * 并应用 ApplicationContext 提供的 Environment 完成 ${ } 解析
 * registerResolvableDependency 来注册 beanFactory 以及 ApplicationContext，让它们也能用于依赖注入
@@ -227,7 +228,7 @@ public class Bean3 {
 * beanFactory 后处理器，充当 beanFactory 的扩展点，可以用来补充或修改 BeanDefinition
 * 常见的 beanFactory 后处理器有
   * ConfigurationClassPostProcessor – 解析 @Configuration、@Bean、@Import、@PropertySource 等
-  * PropertySourcesPlaceHolderConfigurer – 替换 BeanDefinition 中的 ${ }
+  * PropertySourcesPlaceHolderConfigurer – 替换 BeanDefinition 中的 ${ } （过去xml常使用）
   * MapperScannerConfigurer – 补充 Mapper 接口对应的 BeanDefinition
 
 ![image-20210902183232114](img/day04/image-20210902183232114.png)
@@ -239,6 +240,71 @@ public class Bean3 {
   * AutowiredAnnotationBeanPostProcessor 功能有：解析 @Autowired，@Value 注解
   * CommonAnnotationBeanPostProcessor 功能有：解析 @Resource，@PostConstruct，@PreDestroy
   * AnnotationAwareAspectJAutoProxyCreator 功能有：为符合切点的目标 bean 自动创建代理
+
+```java
+package day04.refresh;
+
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.annotation.CommonAnnotationBeanPostProcessor;
+import org.springframework.context.support.GenericApplicationContext;
+
+import javax.annotation.Resource;
+
+public class TestBeanPostProcessor {
+
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        beanFactory.registerBeanDefinition("bean1", BeanDefinitionBuilder.genericBeanDefinition(Bean1.class).getBeanDefinition());
+        beanFactory.registerBeanDefinition("bean2", BeanDefinitionBuilder.genericBeanDefinition(Bean2.class).getBeanDefinition());
+        beanFactory.registerBeanDefinition("bean3", BeanDefinitionBuilder.genericBeanDefinition(Bean3.class).getBeanDefinition());
+        beanFactory.registerBeanDefinition("aspect1", BeanDefinitionBuilder.genericBeanDefinition(Aspect1.class).getBeanDefinition());
+        beanFactory.registerBeanDefinition("processor1",
+                BeanDefinitionBuilder.genericBeanDefinition(AutowiredAnnotationBeanPostProcessor.class).getBeanDefinition());
+        beanFactory.registerBeanDefinition("processor2",
+                BeanDefinitionBuilder.genericBeanDefinition(CommonAnnotationBeanPostProcessor.class).getBeanDefinition());
+        beanFactory.registerBeanDefinition("processor3",
+                BeanDefinitionBuilder.genericBeanDefinition(AnnotationAwareAspectJAutoProxyCreator.class).getBeanDefinition());
+
+        context.refresh();
+        beanFactory.getBean(Bean1.class).foo();
+    }
+    static class Bean1 {
+        Bean2 bean2;
+        Bean3 bean3;
+        @Autowired
+        public void setBean2(Bean2 bean2) {
+            System.out.println("发生了依赖注入..." + bean2);
+            this.bean2 = bean2;
+        }
+        @Resource
+        public void setBean3(Bean3 bean3) {
+            System.out.println("发生了依赖注入..." + bean3);
+            this.bean3 = bean3;
+        }
+        public void foo() {
+            System.out.println("foo");
+        }
+    }
+    static class Bean2 {
+    }
+    static class Bean3 {
+    }
+    @Aspect
+    static class Aspect1 {
+        @Before("execution(* foo())")
+        public void before() {
+            System.out.println("before...");
+        }
+    }
+}
+```
 
 ![image-20210902183520307](img/day04/image-20210902183520307.png)
 
