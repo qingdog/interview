@@ -414,6 +414,7 @@ bean 的生命周期从调用 beanFactory 的 getBean 开始，到这个 bean �
 * 对于 prototype scope，每次都会进入创建流程
 * 对于自定义 scope，例如 request，首先到 request 域获取 bean，如果有则直接返回，没有再进入创建流程
 
+
 ```java
 package day04.bean;
 
@@ -498,26 +499,25 @@ public class TestScope {
 
 **5.1 创建 bean - 创建 bean 实例**
 
-| **要点**                                                                | **总结**                                                                                 |
-|-----------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| 有自定义 TargetSource 的情况                                                 | 由 AnnotationAwareAspectJAutoProxyCreator 创建代理返回                                        |
-| Supplier 方式创建 bean 实例                                                 | 为 Spring 5.0 新增功能，方便编程方式创建  bean  实例                                                   |
-| FactoryMethod 方式  创建 bean  实例                                         | ① 分成静态工厂与实例工厂；② 工厂方法若有参数，需要对工厂方法参数进行解析，利用  resolveDependency；③ 如果有多个工厂方法候选者，还要进一步按权重筛选 |
-| <span style="color: red;">AutowiredAnnotationBeanPostProcessor</span> | ① 优先选择带  @Autowired  注解的构造；② 若有唯一的带参构造，也会入选                                            |
-| mbd.getPreferredConstructors                                          | 选择所有公共构造，这些构造之间按权重筛选                                                                   |
-| <span style="color: red;">采用默认构造</span>                               | 如果上面的后处理器和 BeanDefiniation 都没找到构造，采用默认构造，即使是私有的                                        |
-
+| **要点**                                                     | **总结**                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 有自定义 TargetSource 的情况                                 | 由 AnnotationAwareAspectJAutoProxyCreator 创建代理返回       |
+| Supplier 方式创建 bean 实例                                  | 为 Spring 5.0 新增功能，方便编程方式创建  bean  实例         |
+| FactoryMethod 方式  创建 bean  实例                          | ① 分成静态工厂与实例工厂；② 工厂方法若有参数，需要对工厂方法参数进行解析，利用  resolveDependency；③ 如果有多个工厂方法候选者，还要进一步按权重筛选 |
+| <span style="color: red;">**AutowiredAnnotationBeanPostProcessor**</span> | ① 优先选择带  @Autowired  注解的构造；② 若有唯一的带参构造，也会入选 |
+| mbd.getPreferredConstructors                                 | 选择所有公共构造，这些构造之间按权重筛选                     |
+| <span style="color: red;">**采用默认构造**</span>            | 如果上面的后处理器和 BeanDefiniation 都没找到构造，采用默认构造，即使是私有的 |
 
 **5.2 创建 bean - 依赖注入**
 
-| **要点**                                                               | **总结**                                                                                                                                                                                   |
-|----------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| <span style="color: red;">采用默认构造AutowiredAnnotationBeanPostProcessor | 识别   @Autowired  及 @Value  标注的成员，封装为  InjectionMetadata 进行依赖注入                                                                                                                           |
-| <span style="color: red;">CommonAnnotationBeanPostProcessor          | 识别   @Resource  标注的成员，封装为  InjectionMetadata 进行依赖注入                                                                                                                                      |
-| resolveDependency                                                    | 用来查找要装配的值，可以识别：① Optional；② ObjectFactory 及 ObjectProvider；③ @Lazy  注解；④ @Value  注解（${  }, #{ }, 类型转换）；⑤ 集合类型（Collection，Map，数组等）；⑥ 泛型和  @Qualifier（用来区分类型歧义）；⑦ primary  及名字匹配（用来区分类型歧义） |
-| <span style="color: red;">AUTOWIRE_BY_NAME                           | 根据成员名字找 bean 对象，修改 mbd 的 propertyValues，不会考虑简单类型的成员                                                                                                                                      |
-| <span style="color: red;">AUTOWIRE_BY_TYPE                           | 根据成员类型执行 resolveDependency 找到依赖注入的值，修改  mbd 的 propertyValues                                                                                                                             |
-| <span style="color: red;">applyPropertyValues                        | 根据 mbd 的 propertyValues 进行依赖注入（即xml中 `<property name ref                                                                                                                                 |value/>`） |
+| **要点**                                                     | **总结**                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| <span style="color: red;">**采用默认构造AutowiredAnnotationBeanPostProcessor**</span> | 识别   @Autowired  及 @Value  标注的成员，封装为  InjectionMetadata 进行依赖注入 |
+| <span style="color: red;">**CommonAnnotationBeanPostProcessor**</span> | 识别   @Resource  标注的成员，封装为  InjectionMetadata 进行依赖注入 |
+| resolveDependency                                            | 用来查找要装配的值，可以识别：① Optional；② ObjectFactory 及 ObjectProvider；③ @Lazy  注解；④ @Value  注解（${  }, #{ }, 类型转换）；⑤ 集合类型（Collection，Map，数组等）；⑥ 泛型和  @Qualifier（用来区分类型歧义）；⑦ primary  及名字匹配（用来区分类型歧义） |
+| <span style="color: red;">**AUTOWIRE_BY_NAME**</span>        | 根据成员名字找 bean 对象，修改 mbd 的 propertyValues，不会考虑简单类型的成员 |
+| <span style="color: red;">**AUTOWIRE_BY_TYPE**</span>        | 根据成员类型执行 resolveDependency 找到依赖注入的值，修改  mbd 的 propertyValues |
+| <span style="color: red;">**applyPropertyValues**</span>     | 根据 mbd 的 propertyValues 进行依赖注入（即xml中 `<property name ref                                                                                                                                 |value/>`） |
 
 ```java
 package day04.bean;
@@ -576,14 +576,14 @@ public class TestInjection {
 
 **5.3 创建 bean - 初始化**
 
-| **要点**              | **总结**                                                     |
-| --------------------- | ------------------------------------------------------------ |
-| <span style="color: red;">内置 Aware 接口的装配 | 包括 BeanNameAware，BeanFactoryAware 等                      |
-| <span style="color: red;">扩展 Aware 接口的装配 | 由 ApplicationContextAwareProcessor 解析，执行时机在  postProcessBeforeInitialization |
-| <span style="color: red;">@PostConstruct        | 由 CommonAnnotationBeanPostProcessor 解析，执行时机在  postProcessBeforeInitialization |
-| <span style="color: red;">InitializingBean      | 通过接口回调执行初始化                                       |
-| <span style="color: red;">initMethod            | 根据 BeanDefinition 得到的初始化方法执行初始化，即 `<bean init-method>` 或 @Bean(initMethod) |
-| <span style="color: red;">创建 aop 代理         | 由 AnnotationAwareAspectJAutoProxyCreator 创建，执行时机在  postProcessAfterInitialization |
+| **要点**                                                   | **总结**                                                     |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| <span style="color: red;">**内置 Aware 接口的装配**</span> | 包括 BeanNameAware，BeanFactoryAware 等                      |
+| <span style="color: red;">**扩展 Aware 接口的装配**</span> | 由 ApplicationContextAwareProcessor 解析，执行时机在  postProcessBeforeInitialization |
+| <span style="color: red;">**@PostConstruct**</span>        | 由 CommonAnnotationBeanPostProcessor 解析，执行时机在  postProcessBeforeInitialization |
+| <span style="color: red;">**InitializingBean**</span>      | 通过接口回调执行初始化                                       |
+| <span style="color: red;">**initMethod**</span>            | 根据 BeanDefinition 得到的初始化方法执行初始化，即 `<bean init-method>` 或 @Bean(initMethod) |
+| <span style="color: red;">**创建 aop 代理**</span>         | 由 AnnotationAwareAspectJAutoProxyCreator 创建，执行时机在  postProcessAfterInitialization |
 
 ```java
 package day04.bean;
