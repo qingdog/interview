@@ -9,6 +9,7 @@ import org.springframework.context.annotation.AnnotationConfigUtils;
 import org.springframework.context.support.GenericApplicationContext;
 
 // 测试如果对同一属性进行的 @Autowired 注入、AUTOWIRE_BY_NAME、精确指定注入名称, 优先级是怎样的
+// ref > byName > Autowired
 public class TestInjection {
     public static void main(String[] args) {
         GenericApplicationContext context = new GenericApplicationContext();
