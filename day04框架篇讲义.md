@@ -219,7 +219,7 @@ public class Bean3 {
 **4. postProcessBeanFactory**
 
 * 这一步是空实现，留给子类扩展。
-  * 一般 Web 环境的 ApplicationContext 都要利用它注册新的 Scope，完善 Web 下的 BeanFactory
+  * 一般 Web 环境的 ApplicationContext 都要利用它注册新的 Scope（除了单例和原型还有request,response），完善 Web 下的 BeanFactory
 * 这里体现的是模板方法设计模式
 
 **5. invokeBeanFactoryPostProcessors**
