@@ -586,6 +586,7 @@ public class TestInjection {
 | <span style="color: red;">**创建 aop 代理**</span>         | 由 AnnotationAwareAspectJAutoProxyCreator 创建，执行时机在  postProcessAfterInitialization |
 
 ```java
+// 4 - 2 - 1 -3
 package day04.bean;
 
 import org.springframework.beans.BeansException;
@@ -609,7 +610,7 @@ public class TestInitialization {
 
     static class Bean1 implements InitializingBean, BeanFactoryAware {
 
-        @Override
+        @Override//InitializingBean初始化
         public void afterPropertiesSet() throws Exception {
             System.out.println(1);
         }
@@ -623,7 +624,7 @@ public class TestInitialization {
             System.out.println(3);
         }
 
-        @Override
+        @Override//BeanFactoryAware初始化
         public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
             System.out.println(4);
         }
