@@ -497,7 +497,7 @@ public class TestScope {
 }
 ```
 
-**5.1 创建 bean - 创建 bean 实例**
+**5.1 创建 bean - 创建 bean 实例（重点）**
 
 | **要点**                                                     | **总结**                                                     |
 | ------------------------------------------------------------ | ------------------------------------------------------------ |
@@ -644,7 +644,7 @@ public class TestInitialization {
   * singleton scope 的可销毁 bean 会存储于 beanFactory 的成员当中
   * 自定义 scope 的可销毁 bean 会存储于对应的域对象当中
   * prototype scope 不会存储，需要自己找到此对象销毁
-* 存储时都会封装为 DisposableBeanAdapter 类型对销毁方法的调用进行适配
+* 存储时都会封装为 DisposableBeanAdapter（一次性Bean适配器）类型对销毁方法的调用进行适配
 
 **6. 类型转换处理**
 
@@ -990,6 +990,122 @@ public class App60_4 {
 
 **1. 抛出检查异常导致事务不能正确回滚**
 
+* 原因：Spring Transactional 默认只对runtime和error子类的异常进行回滚，检查异常不回滚
+* 例如io异常不进行回滚，需要手动处理（建议：@Transactional(rollbackFor = Exception.class))
+
+```java
+package day04.tx.app.service;
+
+import day04.tx.AppConfig;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
+import org.springframework.context.annotation.AnnotationConfigUtils;
+import org.springframework.context.support.GenericApplicationContext;
+
+import java.io.FileNotFoundException;
+
+public class TestService1 {
+    public static void main(String[] args) throws FileNotFoundException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        ConfigurationPropertiesBindingPostProcessor.register(context.getDefaultListableBeanFactory());
+        context.registerBean(AppConfig.class);
+        context.refresh();
+
+        Service1 bean = context.getBean(Service1.class);
+        bean.transfer(1, 2, 500);
+    }
+}
+```
+```java
+package day04.tx;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.mybatis.spring.SqlSessionFactoryBean;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.*;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.init.DataSourceInitializer;
+import org.springframework.jdbc.datasource.init.DatabasePopulator;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.interceptor.TransactionAttributeSource;
+
+import javax.sql.DataSource;
+
+@Configuration
+@PropertySource("classpath:jdbc.properties")
+@EnableTransactionManagement
+@EnableAspectJAutoProxy(exposeProxy = true)
+@ComponentScan("day04.tx.app.service")
+@MapperScan("day04.tx.app.mapper")
+public class AppConfig {
+
+    @ConfigurationProperties("jdbc")
+    @Bean
+    public DataSource dataSource() {
+        return new HikariDataSource();
+    }
+
+    @Bean
+    public DataSourceInitializer dataSourceInitializer(DataSource dataSource, DatabasePopulator populator) {
+        DataSourceInitializer dataSourceInitializer = new DataSourceInitializer();
+        dataSourceInitializer.setDataSource(dataSource);
+        dataSourceInitializer.setDatabasePopulator(populator);
+        return dataSourceInitializer;
+    }
+
+    @Bean
+    public DatabasePopulator databasePopulator() {
+        // 执行sql脚本
+        return new ResourceDatabasePopulator(new ClassPathResource("account.sql"));
+    }
+
+    @Bean
+    public SqlSessionFactoryBean sqlSessionFactory(DataSource dataSource) {
+        SqlSessionFactoryBean factoryBean = new SqlSessionFactoryBean();
+        factoryBean.setDataSource(dataSource);
+        return factoryBean;
+    }
+
+    @Bean
+    public PlatformTransactionManager transactionManager(DataSource dataSource) {
+        return new DataSourceTransactionManager(dataSource);
+    }
+
+    @Bean
+    // 只要 beanFactory 的 allowBeanDefinitionOverriding==true, 即使系统的 @Bean 定义没有 @ConditionalOnMissingBean 条件，也会被我们的同名 @Bean 覆盖掉
+    public TransactionAttributeSource transactionAttributeSource() {
+        return new AnnotationTransactionAttributeSource(false);
+    }
+
+}
+```
+```sql
+drop table if exists account;
+create table account( accountNo int primary key auto_increment, balance  int not null);
+insert into account (accountNo, balance) values (1, 1000), (2, 1000);
+```
+```java
+package day04.tx.app.mapper;
+
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+public interface AccountMapper {
+
+    @Update("update account set balance=balance+#{balance} where accountNo=#{accountNo}")
+    void update(@Param("accountNo") int accountNo, @Param("balance") int balance);
+
+    @Select("select balance from account where accountNo=#{accountNo} for update")
+    int findBalanceBy(int accountNo);
+}
+```
+
 ```java
 @Service
 public class Service1 {
@@ -1076,6 +1192,7 @@ public class Service3 {
 
 ```java
 @Aspect
+@Order(Ordered.LOWEST_PRECEDENCE - 1)
 public class MyAspect {
     @Around("execution(* transfer(..))")
     public Object around(ProceedingJoinPoint pjp) throws Throwable {
@@ -1125,6 +1242,7 @@ public class Service4 {
 ```java
 @Bean
 public TransactionAttributeSource transactionAttributeSource() {
+    // boolean publicMethodsOnly
     return new AnnotationTransactionAttributeSource(false);
 }
 ```
@@ -1132,6 +1250,38 @@ public TransactionAttributeSource transactionAttributeSource() {
 
 
 **5. 父子容器导致的事务失效**
+```java
+package day04.tx.app.service;
+
+import day04.tx.AppConfig;
+import day04.tx.WebConfig;
+import day04.tx.app.controller.AccountController;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
+import org.springframework.context.annotation.AnnotationConfigUtils;
+import org.springframework.context.support.GenericApplicationContext;
+
+import java.io.FileNotFoundException;
+
+public class TestService5 {
+    public static void main(String[] args) throws FileNotFoundException {
+        GenericApplicationContext parent = new GenericApplicationContext();
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(parent.getDefaultListableBeanFactory());
+        ConfigurationPropertiesBindingPostProcessor.register(parent.getDefaultListableBeanFactory());
+        parent.registerBean(AppConfig.class);
+        parent.refresh();
+
+        GenericApplicationContext child = new GenericApplicationContext();
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(child.getDefaultListableBeanFactory());
+        // 如果子容器中没有service，则到父容器中找bean进行依赖注入
+        child.setParent(parent);
+        child.registerBean(WebConfig.class);
+        child.refresh();
+
+        AccountController bean = child.getBean(AccountController.class);
+        bean.transfer(1, 2, 500);
+    }
+}
+```
 
 ```java
 package day04.tx.app.service;
@@ -1197,13 +1347,13 @@ public class WebConfig {
 }
 ```
 
-现在配置了父子容器，WebConfig 对应子容器，AppConfig 对应父容器，发现事务依然失效
+现在配置了父子容器，WebConfig 对应子容器，AppConfig 对应父容器，发现事务依然失效（mvc和spring整合时可能出现）
 
-* 原因：子容器扫描范围过大，把未加事务配置的 service 扫描进来
+* 原因：子容器（WebConfig）扫描范围过大，把未加事务配置的 service 扫描进来
 
-* 解法1：各扫描各的，不要图简便
+* 解法1：各扫描各的，不要图简便 @ComponentScan("day04.tx.app.controller")
 
-* 解法2：不要用父子容器，所有 bean 放在同一容器
+* 解法2：不要用父子容器，所有 bean 放在同一容器（springboot只有一个容器，没有父子容器不会出现该事务失效场景）
 
 
 
@@ -1213,15 +1363,46 @@ public class WebConfig {
 @Service
 public class Service6 {
 
+    // 默认传播行为
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
     public void foo() throws FileNotFoundException {
         LoggerUtils.get().debug("foo");
-        bar();
+        // 不是由代理对象调用的bar方法
+        // class day04.tx.app.service.Service6
+        System.out.println(this.getClass());
+        this.bar();
     }
-
+    // 传播行为=创建新的事务，通常日志可能会使用
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void bar() throws FileNotFoundException {
         LoggerUtils.get().debug("bar");
+    }
+}
+```
+```java
+package day04.tx.app.service;
+
+import day04.tx.AppConfig;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
+import org.springframework.context.annotation.AnnotationConfigUtils;
+import org.springframework.context.support.GenericApplicationContext;
+
+import java.io.FileNotFoundException;
+
+public class TestService6 {
+
+    public static void main(String[] args) throws FileNotFoundException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        ConfigurationPropertiesBindingPostProcessor.register(context.getDefaultListableBeanFactory());
+        context.registerBean(AppConfig.class);
+        context.refresh();
+
+        Service6 bean = context.getBean(Service6.class);
+        // Service6从容器中取出来的是代理对象，调用foo方法后才能触发事务
+        // class day04.tx.app.service.Service6$$EnhancerBySpringCGLIB$$b3de38b0
+        System.out.println(bean.getClass());
+        bean.foo();
     }
 }
 ```
@@ -1241,13 +1422,15 @@ public class Service6 {
 public class Service6 {
 
 	@Autowired
-	private Service6 proxy; // 本质上是一种循环依赖
+	private Service6 proxy; // 本质上是一种循环依赖，spring的set循环依赖可解决
 
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
     public void foo() throws FileNotFoundException {
         LoggerUtils.get().debug("foo");
 		System.out.println(proxy.getClass());
 		proxy.bar();
+        // Suspending current Transaction，creating new transaction with name [day04.tx.app.service.Service6.bar]
+        // 代理对象调用bar方法后，暂停当前事务，创建新的事务，获取新的连接JDBC Connection，在新的连接设置手动提交开启新的事务
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
@@ -1266,6 +1449,7 @@ public class Service6 {
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = Exception.class)
     public void foo() throws FileNotFoundException {
         LoggerUtils.get().debug("foo");
+        // 增加参数@EnableAspectJAutoProxy(exposeProxy = true)，再从aop中取当前代理对象
         ((Service6) AopContext.currentProxy()).bar();
     }
 
@@ -1329,6 +1513,16 @@ public class Service7 {
     private AccountMapper accountMapper;
 
     @Transactional(rollbackFor = Exception.class)
+    // synchronized 加在方法里没有包括事务提交，多线程下可能出现错误，线程1释放了锁后，线程2先执行查询操作（查询到了线程1还没提交前的数据），线程1再提交，导致余额出现负数
+    /* 提交操作位于：DataSourceTransactionManager.doCommit(DefaultTransactionStatus status){
+          DataSourceTransactionObject txObject = (DataSourceTransactionObject)status.getTransaction();
+          Connection con = txObject.getConnectionHolder().getConnection();
+          if (status.isDebug()) {
+            this.logger.debug("Committing JDBC transaction on Connection [" + con + "]");
+            try {
+                con.commit();
+        }
+    }*/
     public synchronized void transfer(int from, int to, int amount) {
         int fromBalance = accountMapper.findBalanceBy(from);
         logger.debug("更新前查询余额为: {}", fromBalance);
@@ -1353,9 +1547,91 @@ public class Service7 {
 
 * 解法1：synchronized 范围应扩大至代理方法调用
 
-* 解法2：使用 select … for update 替换 select
+```java
+package day04.tx.app.service;
 
+import day04.tx.AppConfig;
+import org.slf4j.MDC;
+import org.springframework.boot.context.properties.ConfigurationPropertiesBindingPostProcessor;
+import org.springframework.context.annotation.AnnotationConfigUtils;
+import org.springframework.context.support.GenericApplicationContext;
 
+import java.util.concurrent.CountDownLatch;
+
+public class TestService7 {
+
+    public static void main(String[] args) throws InterruptedException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        ConfigurationPropertiesBindingPostProcessor.register(context.getDefaultListableBeanFactory());
+        context.registerBean(AppConfig.class);
+        context.refresh();
+
+        Service7 bean = context.getBean(Service7.class);
+        // 加锁对象
+//        Object lock = new Object();
+
+        CountDownLatch latch = new CountDownLatch(2);
+        new MyThread(() -> {
+            // 把锁加在代理里的方法前后，不仅包括目标方法的转账调用而且包括代理方法，包括中间事务通知方法（提交操作）
+            // 它们多个方法的调用都是原子的（多线程下不会交替执行，是整体执行）
+//            synchronized (lock) {
+                bean.transfer(1, 2, 1000);
+//            }
+            latch.countDown();
+        }, "t1", "boldMagenta").start();
+
+        new MyThread(() -> {
+//            synchronized (lock) {
+                bean.transfer(1, 2, 1000);
+//            }
+            latch.countDown();
+        }, "t2", "boldBlue").start();
+
+        latch.await();
+        System.out.println(bean.findBalance(1));
+    }
+
+    static class MyThread extends Thread {
+        private String color;
+
+        public MyThread(Runnable target, String name, String color) {
+            super(target, name);
+            this.color = color;
+        }
+
+        @Override
+        public void run() {
+            MDC.put("thread", color);
+            super.run();
+            MDC.remove("thread");
+        }
+    }
+}
+```
+
+* 解法2：使用 select … for update 替换 select（推荐）
+
+```java
+package day04.tx.app.mapper;
+
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+public interface AccountMapper {
+
+    @Update("update account set balance=balance+#{balance} where accountNo=#{accountNo}")
+    void update(@Param("accountNo") int accountNo, @Param("balance") int balance);
+
+    // 事务开启后，select查询操作不会阻塞
+    @Select("select balance from account where accountNo=#{accountNo}")
+    // select 配合事务一起使用，线程1使用了select ... for update 会加行锁，其他线程后select 同一行 for update 会锁住进入等待
+    // 给con.commit();加断点，在多线程交替执行情况下，线程2即使执行了查询语句，也要等待线程1事务提交后才能得到数据
+    @Select("select balance from account where accountNo=#{accountNo} for update")
+    int findBalanceBy(int accountNo);
+}
+```
 
 ## 5. Spring MVC 执行流程
 
