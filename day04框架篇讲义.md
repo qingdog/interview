@@ -1235,6 +1235,7 @@ public class Service4 {
 ```
 
 * 原因：Spring 为方法创建代理、添加事务通知、前提条件都是该方法是 public 的
+* Spring事务需要公有方法，私有方法在同包里可调用
 
 * 解法1：改为 public 方法
 * 解法2：添加 bean 配置如下（不推荐）
@@ -1654,7 +1655,9 @@ public interface AccountMapper {
 
 2. init 方法内会创建 Spring Web 容器，并调用容器 refresh 方法
 
-3. refresh 过程中会创建并初始化 SpringMVC 中的重要组件， 例如 MultipartResolver，HandlerMapping，HandlerAdapter，HandlerExceptionResolver、ViewResolver 等
+3. refresh 过程中会创建并初始化 SpringMVC 中的重要组件， 
+   例如 MultipartResolver（表单文件上传），HandlerMapping（请求映射），HandlerAdapter（调用控制器的方法处理请求），
+   HandlerExceptionResolver（异常处理）、ViewResolver（解析视图） 等
 
 4. 容器初始化后，会将上一步初始化好的重要组件，赋值给 DispatcherServlet 的成员变量，留待后用
 
@@ -1712,7 +1715,7 @@ public interface AccountMapper {
 
 5. 最后都会执行拦截器的 afterCompletion 方法
 
-6. 如果控制器方法标注了 @ResponseBody 注解，则在第 2 步，就会生成 json 结果，并标记 ModelAndView 已处理，这样就不会执行第 3 步的视图渲染
+6. 如果控制器方法标注了 @ResponseBody 注解，则在第 2 步，就会由MessageConverter生成 json 结果，并标记 ModelAndView 已处理，这样就不会执行第 3 步的视图渲染
 
 
 
@@ -1727,11 +1730,9 @@ public interface AccountMapper {
 > * 注解的详细列表请参考：面试题-spring-注解.xmind
 > * 下面列出了视频中重点提及的注解，考虑到大部分注解同学们已经比较熟悉了，仅对个别的作简要说明
 
-
-
 **事务注解**
 
-* @EnableTransactionManagement，会额外加载 4 个 bean
+* @EnableTransactionManagement 启用事务管理，会额外加载 4 个 bean（@Import({TransactionManagementConfigurationSelector.class})）
   * BeanFactoryTransactionAttributeSourceAdvisor 事务切面类
   * TransactionAttributeSource 用来解析事务属性
   * TransactionInterceptor 事务拦截器
@@ -1740,15 +1741,15 @@ public interface AccountMapper {
 
 **核心**
 
-* @Order
+* @Order Order控制多个 Bean 的顺序，最大整数为最低优先级
 
 **切面**
 
-* @EnableAspectJAutoProxy
-  * 会加载 AnnotationAwareAspectJAutoProxyCreator，它是一个 bean 后处理器，用来创建代理
+* @EnableAspectJAutoProxy 启用aop自动代理
+  * 会加载 AnnotationAwareAspectJAutoProxyCreator，它是一个 bean 后处理器，用来创建代理，通常在初始化之后，如果循环依赖会在依赖注入之前生成代理
   * 如果没有配置 @EnableAspectJAutoProxy，又需要用到代理（如事务）则会使用 InfrastructureAdvisorAutoProxyCreator 这个 bean 后处理器
 
-**组件扫描与配置类**
+**组件扫描**
 
 * @Component
 
@@ -1758,14 +1759,16 @@ public interface AccountMapper {
 
 * @Repository
 
-* @ComponentScan
+* @ComponentScan 扫描加入spring容器管理
 
-* @Conditional 
+**与配置类**
+
+* @Conditional 条件装配
 
 * @Configuration
 
   * 配置类其实相当于一个工厂, 标注 @Bean 注解的方法相当于工厂方法
-  * @Bean 不支持方法重载, 如果有多个重载方法, 仅有一个能入选为工厂方法
+  * @Bean 加入 BeanDefinition，不支持方法重载, 如果有多个重载方法, 仅有一个能入选为工厂方法
   * @Configuration 默认会为标注的类生成代理, 其目的是保证 @Bean 方法相互调用时, 仍然能保证其单例特性
   * @Configuration 中如果含有 BeanFactory 后处理器, 则实例工厂方法会导致 MyConfig 提前创建, 造成其依赖注入失败，解决方法是改用静态工厂方法或直接为 @Bean 的方法参数依赖注入, 针对 Mapper 扫描可以改用注解方式
 
@@ -1793,59 +1796,123 @@ public interface AccountMapper {
 * @Lazy
 
   * 加在类上，表示此类延迟实例化、初始化
-  * 加在方法参数上，此参数会以代理方式注入
+  * 加在方法参数上，解决循环依赖，参数会延迟执行注入，此参数会以代理方式注入
 
-* @PropertySource
+* @PropertySource 读取外部*.property文件，作为键值信息加入Environment
 
 **依赖注入**
 
-* @Autowired
-* @Qualifier
-* @Value
+* @Autowired 加在方法上，成员变量上，进行依赖注入
+* @Qualifier 同一类型有多个 Bean ，指定名字
+* @Value 注入简单类型，或解析${}、#{}
 
 **mvc mapping**
 
-* @RequestMapping，可以派生多个注解如 @GetMapping 等
+* @RequestMapping，建立请求路径和控制器方法之间的映射关系，可将方法该注解参数上具有相同的一部分路径取出在类上新增该注解放入。
+* 可以派生多个注解如 @GetMapping 等，使用@AliasFor 实现别名
 
 **mvc rest**
 
-* @RequestBody
-* @ResponseBody，组合 @Controller =>  @RestController
+* @RequestBody 处理请求体中json数据，开启 @EnableWebMvc 由 com.fasterxml.jackson.core.jackson-databind 转换成java对象
+* @ResponseBody，把java对象转换成json数据写入到响应体，组合 @Controller =>  @RestController
 * @ResponseStatus
 
 **mvc 统一处理**
 
-* @ControllerAdvice，组合 @ResponseBody => @RestControllerAdvice
-* @ExceptionHandler
+* @ControllerAdvice，统一处理异常，统一转换器。把处理异常的方法放入该注解类标注的类中
+* 组合 @ResponseBody => @RestControllerAdvice 做了异常处理返回的结果转换为json数据写入响应体
+* @ExceptionHandler 标注处理异常的方法，也可以放入单独的控制器中作为局部的异常处理
+
+```java
+@RestControllerAdvice
+public class ProjectExceptionAdvice {
+    @ExceptionHandler(SystemException.class)
+    public Result doSystemException(SystemException ex){
+        //记录日志
+        //发送消息给运维
+        //发送邮件给开发人员,ex对象发送给开发人员
+        return new Result(ex.getCode(),null,ex.getMessage());
+    }
+    @ExceptionHandler(BusinessException.class)
+    public Result doBusinessException(BusinessException ex){
+        return new Result(ex.getCode(),null,ex.getMessage());
+    }
+    @ExceptionHandler(Exception.class)
+    public Result doOtherException(Exception ex){
+        //记录日志
+        //发送消息给运维
+        //发送邮件给开发人员,ex对象发送给开发人员
+        return new Result(Code.SYSTEM_UNKNOW_ERR,null,"系统繁忙，请稍后再试！");
+    }
+}
+```
 
 **mvc 参数**
 
-* @PathVariable
+* @RequestHeader 获取请求头中的信息
+* @CookieValue 获取Cookie的值
+* @PathVariable 获取请求路径中的参数
+* @RequestParam 获取请求参数即?后的键值信息，也可是是表单中的请求参数。
+* 请求参数和方法参数对应可省略，接口/抽象集合接收数组参数不能省略。参数defaultValue可设置默认值
+
+**转换与格式化**
+* @DateTimeFormet 指定日期转换格式，默认 yyyy/MM/ss
+* @NumberFormat 指定数字转换格式
+* @InitBinder注册自定义类型转换器
+
+**validation**
+* @Validated 加在JavaBean上表明将来要做校验。校验规则加在属性上需要使用第三方注解比如@NotNull/@NotEmpty
+
+**scope**
+* 作用域使用较少
+* @ApplicationScope
+* @RequestScope
+* @SessionScope
+* 注解维护状态，使用较少
+* ModelAttribute
+* RequestAttribute
+* SessionAttribute
+* SessionAttributes
 
 **mvc ajax**
 
-* @CrossOrigin
+* @CrossOrigin 解决ajax的跨域问题，加响应头允许ajax跨域指定请求路径，如果使用HttpClient客户端则没有跨域问题
 
 **boot auto**
 
-* @SpringBootApplication
-* @EnableAutoConfiguration
-* @SpringBootConfiguration
+* @SpringBootApplication 
+* @EnableAutoConfiguration 找到自动配置类关联的@Bean都要注册到容器中
+* @SpringBootConfiguration SpringBoot配置类，包括@Configuration
 
 **boot condition**
-
-* @ConditionalOnClass，classpath 下存在某个 class 时，条件才成立
-* @ConditionalOnMissingBean，beanFactory 内不存在某个 bean 时，条件才成立
+* SpringBoot对Spring中的条件注解@Conditional进行扩展
+* @ConditionalOnClass 该注解包括@Conditional，增加了新的条件判断。类路径classpath 下存在某个 class 时，条件才成立
+* @ConditionalOnMissingBean，beanFactory 内不存在某个 bean 时，条件才成立，候补操作加入默认bean
 * @ConditionalOnProperty，配置文件中存在某个 property（键、值）时，条件才成立
 
 **boot properties**
 
-* @ConfigurationProperties，会将当前 bean 的属性与配置文件中的键值进行绑定
-* @EnableConfigurationProperties，会添加两个较为重要的 bean
+* @ConfigurationProperties，会将当前 bean 的属性与配置文件中的键值进行绑定，简化@Value的赋值操作
+
+
+```java
+class Anonymous{
+  @ConfigurationProperties("jdbc")
+  // 表示将配置文件中前缀为"jdbc"的属性注入到DataSource类型的bean中。
+//  jdbc.driverClassName=com.mysql.cj.jdbc.Driver
+//  jdbc.jdbcUrl=jdbc:mysql://localhost:3306/test?useSSL=false&useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+//  jdbc.username=root
+//  jdbc.password=root
+  // @Bean注解表示在Spring容器中创建一个名为dataSource的DataSource类型的bean，并使用HikariDataSource作为其实现。
+  @Bean
+  public DataSource dataSource() {
+    return new HikariDataSource();
+  }
+}
+```
+* @EnableConfigurationProperties 启用配置文件中键值绑定，在bean工厂里加后处理器PostProcessor识别@ConfigurationProperties。会添加两个较为重要的 bean
   * ConfigurationPropertiesBindingPostProcessor，bean 后处理器，在 bean 初始化前调用下面的 binder
   * ConfigurationPropertiesBinder，真正执行绑定操作
-
-
 
 ## 7. SpringBoot 自动配置原理
 
@@ -1859,13 +1926,59 @@ public interface AccountMapper {
 
 1. @SpringBootConfiguration 与普通 @Configuration 相比，唯一区别是前者要求整个 app 中只出现一次
 2. @ComponentScan
-   * excludeFilters - 用来在组件扫描时进行排除，也会排除自动配置类
+   * excludeFilters - 加过滤器（自身会加入容器）用来在组件扫描时进行排除（排除实现TypeExcludeFilter接口的类），也会排除自动配置类AutoConfigurationExcludeFilter.class
 
+### @ComponentScan
+```java
+public class TestExcludeFilter {
+
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+        context.registerBean(MyConfig.class);
+        context.registerBean(MyFilter.class);
+        context.refresh();
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+    }
+
+    @Configuration
+    @ComponentScan(basePackages = {"day04.boot.sub"},
+            excludeFilters = { @ComponentScan.Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class)})
+    static class MyConfig {
+
+    }
+
+    // 配合 @ComponentScan 使用, 对扫描到的元数据进行过滤, 返回 true 表示过滤掉, false 表示保留
+    static class MyFilter extends TypeExcludeFilter {
+        @Override
+        public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) throws IOException {
+            String className = metadataReader.getClassMetadata().getClassName();
+            LoggerUtils.get().debug("{}", className);
+            if (className.equals(Bean1.class.getName())) {
+                return true;
+            }
+            return false;
+        }
+    }
+}
+```
+
+```java
+@ComponentScan(value="com.itheima",
+    excludeFilters = @ComponentScan.Filter(type = FilterType.ANNOTATION, classes = Controller.class))
+// type属性：设置排除规则，当前使用按照bean定义时的注解类型进行排除
+// classes属性：设置排除的具体注解类，当前设置排除@Controller定义的bean
+public class SpringConfig {}
+```
+
+### @EnableAutoConfiguration
 3. @EnableAutoConfiguration 也是一个组合注解，由下面注解组成
-   * @AutoConfigurationPackage – 用来记住扫描的起始包
-   * @Import(AutoConfigurationImportSelector.class) 用来加载 `META-INF/spring.factories` 中的自动配置类
-
-**为什么不使用 @Import 直接引入自动配置类**
+  * @AutoConfigurationPackage – 用来记住扫描的起始包
+  * @Import 与 @ComponentScan("day04.tx.app.service")注解功能类似
+  * @Import(AutoConfigurationImportSelector.class) 用来加载 `META-INF/spring.factories` 中的自动配置类
+    **为什么不使用 @Import 直接引入自动配置类**
 
 有两个原因：
 
@@ -1876,6 +1989,266 @@ public interface AccountMapper {
 
 * 由 `AutoConfigurationImportSelector.class` 去读取 `META-INF/spring.factories` 中的自动配置类，实现了弱耦合。
 * 另外 `AutoConfigurationImportSelector.class` 实现了 DeferredImportSelector 接口，让自动配置的解析晚于主配置的解析
+
+```java
+public class TestAutoConfiguration {
+
+    public static void main(String[] args) throws IOException {
+        GenericApplicationContext context = new GenericApplicationContext();
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+//        context.getEnvironment().getPropertySources().addLast(new ResourcePropertySource("application.properties"));
+        context.registerBean(MyConfig.class);
+        context.refresh();
+
+//        System.out.println(AutoConfigurationPackages.get(context.getDefaultListableBeanFactory()));
+
+        for (String name : context.getBeanDefinitionNames()) {
+            System.out.println(name);
+        }
+
+//        System.out.println(SpringFactoriesLoader.loadFactoryNames(EnableAutoConfiguration.class, EnableAutoConfiguration.class.getClassLoader()).stream()
+//                .filter(name -> !name.equals(OtherConfig.class.getName())).map(name -> "\"" + name + "\"").collect(Collectors.joining(",","{","}")));
+    }
+
+    
+    @Configuration
+//    @AutoConfigurationPackage // 配置类的包名记录下来放入容器中，后续从工具类中取出
+    @EnableAutoConfiguration(excludeName = {"org.springframework.boot.autoconfigure.admin.SpringApplicationAdminJmxAutoConfiguration", "org.springframework.boot.autoconfigure.aop.AopAutoConfiguration", "org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration", "org.springframework.boot.autoconfigure.batch.BatchAutoConfiguration", "org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration", "org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration", "org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration", "org.springframework.boot.autoconfigure.context.LifecycleAutoConfiguration", "org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration", "org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration", "org.springframework.boot.autoconfigure.couchbase.CouchbaseAutoConfiguration", "org.springframework.boot.autoconfigure.dao.PersistenceExceptionTranslationAutoConfiguration", "org.springframework.boot.autoconfigure.data.cassandra.CassandraDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.cassandra.CassandraReactiveDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.cassandra.CassandraReactiveRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.cassandra.CassandraRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.couchbase.CouchbaseDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.couchbase.CouchbaseReactiveDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.couchbase.CouchbaseReactiveRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.couchbase.CouchbaseRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRestClientAutoConfiguration", "org.springframework.boot.autoconfigure.data.jdbc.JdbcRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.ldap.LdapRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.mongo.MongoReactiveDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.mongo.MongoReactiveRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.neo4j.Neo4jDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.neo4j.Neo4jReactiveDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.neo4j.Neo4jReactiveRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.neo4j.Neo4jRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.r2dbc.R2dbcDataAutoConfiguration", "org.springframework.boot.autoconfigure.data.r2dbc.R2dbcRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration", "org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration", "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration", "org.springframework.boot.autoconfigure.data.rest.RepositoryRestMvcAutoConfiguration", "org.springframework.boot.autoconfigure.data.web.SpringDataWebAutoConfiguration", "org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration", "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration", "org.springframework.boot.autoconfigure.freemarker.FreeMarkerAutoConfiguration", "org.springframework.boot.autoconfigure.groovy.template.GroovyTemplateAutoConfiguration", "org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration", "org.springframework.boot.autoconfigure.h2.H2ConsoleAutoConfiguration", "org.springframework.boot.autoconfigure.hateoas.HypermediaAutoConfiguration", "org.springframework.boot.autoconfigure.hazelcast.HazelcastAutoConfiguration", "org.springframework.boot.autoconfigure.hazelcast.HazelcastJpaDependencyAutoConfiguration", "org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration", "org.springframework.boot.autoconfigure.http.codec.CodecsAutoConfiguration", "org.springframework.boot.autoconfigure.influx.InfluxDbAutoConfiguration", "org.springframework.boot.autoconfigure.info.ProjectInfoAutoConfiguration", "org.springframework.boot.autoconfigure.integration.IntegrationAutoConfiguration", "org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration", "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration", "org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration", "org.springframework.boot.autoconfigure.jdbc.JndiDataSourceAutoConfiguration", "org.springframework.boot.autoconfigure.jdbc.XADataSourceAutoConfiguration", "org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration", "org.springframework.boot.autoconfigure.jms.JmsAutoConfiguration", "org.springframework.boot.autoconfigure.jmx.JmxAutoConfiguration", "org.springframework.boot.autoconfigure.jms.JndiConnectionFactoryAutoConfiguration", "org.springframework.boot.autoconfigure.jms.activemq.ActiveMQAutoConfiguration", "org.springframework.boot.autoconfigure.jms.artemis.ArtemisAutoConfiguration", "org.springframework.boot.autoconfigure.jersey.JerseyAutoConfiguration", "org.springframework.boot.autoconfigure.jooq.JooqAutoConfiguration", "org.springframework.boot.autoconfigure.jsonb.JsonbAutoConfiguration", "org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration", "org.springframework.boot.autoconfigure.availability.ApplicationAvailabilityAutoConfiguration", "org.springframework.boot.autoconfigure.ldap.embedded.EmbeddedLdapAutoConfiguration", "org.springframework.boot.autoconfigure.ldap.LdapAutoConfiguration", "org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration", "org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration", "org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration", "org.springframework.boot.autoconfigure.mongo.embedded.EmbeddedMongoAutoConfiguration", "org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration", "org.springframework.boot.autoconfigure.mongo.MongoReactiveAutoConfiguration", "org.springframework.boot.autoconfigure.mustache.MustacheAutoConfiguration", "org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration", "org.springframework.boot.autoconfigure.netty.NettyAutoConfiguration", "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration", "org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration", "org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration", "org.springframework.boot.autoconfigure.r2dbc.R2dbcTransactionManagerAutoConfiguration", "org.springframework.boot.autoconfigure.rsocket.RSocketMessagingAutoConfiguration", "org.springframework.boot.autoconfigure.rsocket.RSocketRequesterAutoConfiguration", "org.springframework.boot.autoconfigure.rsocket.RSocketServerAutoConfiguration", "org.springframework.boot.autoconfigure.rsocket.RSocketStrategiesAutoConfiguration", "org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration", "org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration", "org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration", "org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration", "org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration", "org.springframework.boot.autoconfigure.security.rsocket.RSocketSecurityAutoConfiguration", "org.springframework.boot.autoconfigure.security.saml2.Saml2RelyingPartyAutoConfiguration", "org.springframework.boot.autoconfigure.sendgrid.SendGridAutoConfiguration", "org.springframework.boot.autoconfigure.session.SessionAutoConfiguration", "org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration", "org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration", "org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration", "org.springframework.boot.autoconfigure.security.oauth2.resource.reactive.ReactiveOAuth2ResourceServerAutoConfiguration", "org.springframework.boot.autoconfigure.solr.SolrAutoConfiguration", "org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration", "org.springframework.boot.autoconfigure.task.TaskExecutionAutoConfiguration", "org.springframework.boot.autoconfigure.task.TaskSchedulingAutoConfiguration", "org.springframework.boot.autoconfigure.thymeleaf.ThymeleafAutoConfiguration", "org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration", "org.springframework.boot.autoconfigure.transaction.jta.JtaAutoConfiguration", "org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration", "org.springframework.boot.autoconfigure.web.client.RestTemplateAutoConfiguration", "org.springframework.boot.autoconfigure.web.embedded.EmbeddedWebServerFactoryCustomizerAutoConfiguration", "org.springframework.boot.autoconfigure.web.reactive.HttpHandlerAutoConfiguration", "org.springframework.boot.autoconfigure.web.reactive.ReactiveWebServerFactoryAutoConfiguration", "org.springframework.boot.autoconfigure.web.reactive.WebFluxAutoConfiguration", "org.springframework.boot.autoconfigure.web.reactive.error.ErrorWebFluxAutoConfiguration", "org.springframework.boot.autoconfigure.web.reactive.function.client.ClientHttpConnectorAutoConfiguration", "org.springframework.boot.autoconfigure.web.reactive.function.client.WebClientAutoConfiguration", "org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration", "org.springframework.boot.autoconfigure.web.servlet.ServletWebServerFactoryAutoConfiguration", "org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration", "org.springframework.boot.autoconfigure.web.servlet.HttpEncodingAutoConfiguration", "org.springframework.boot.autoconfigure.web.servlet.MultipartAutoConfiguration", "org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration", "org.springframework.boot.autoconfigure.websocket.reactive.WebSocketReactiveAutoConfiguration", "org.springframework.boot.autoconfigure.websocket.servlet.WebSocketServletAutoConfiguration", "org.springframework.boot.autoconfigure.websocket.servlet.WebSocketMessagingAutoConfiguration", "org.springframework.boot.autoconfigure.webservices.WebServicesAutoConfiguration", "org.springframework.boot.autoconfigure.webservices.client.WebServiceTemplateAutoConfiguration", "org.mybatis.spring.boot.autoconfigure.MybatisLanguageDriverAutoConfiguration", "org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration"})
+//    @Import(OtherConfig.class)
+    static class MyConfig { // 主配置
+        @Bean
+        public Bean1 bean1() {
+            System.out.println("MyConfig bean1()");
+            return new Bean1();
+        }
+    }
+
+    @Configuration
+    static class OtherConfig { // 从属配置(自动配置、默认配置)
+        @Bean
+        @ConditionalOnMissingBean
+        public Bean1 bean1() {
+            System.out.println("OtherConfig bean1()");
+            return new Bean1();
+        }
+        @Bean
+        public Bean2 bean2() {
+            return new Bean2();
+        }
+    }
+
+    static class Bean1 {
+
+    }
+
+    static class Bean2 {
+
+    }
+}
+```
+
+
+
+### 先理解@Configuration
+```java
+public class TestConfiguration {
+  public static void main(String[] args) {
+    GenericApplicationContext context = new GenericApplicationContext();
+    // 后处理器处理@Configuration和@Bean，加入到BeanDefinitionMap定义信息中
+    AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+    context.registerBean("myConfig", MyConfig.class); // 注册指定类
+    context.refresh(); // 初始化操作
+    // MyConfig的代理对象。实际是默认参数@Configuration(proxyBeanMethods = true)的作用
+//        System.out.println(context.getBean(MyConfig.class).getClass());
+  }
+
+  @Configuration
+  // 对于需要自动代理的dao层扫描可用@MapperScan注解代替配置类MapperScannerConfigurer扫描，可避开提前创建配置类
+  @MapperScan("aaa")
+  // 注意点1: 配置类其实相当于一个工厂, 标注 @Bean 注解的方法相当于工厂方法
+  static class MyConfig {
+    // 注意点2: @Bean 不支持方法重载, 如果有多个重载方法, 仅有一个能入选为工厂方法（多参数的方法将被选为工厂方法）
+    // 有时会发现没有@Configuration注解时，配置类也被正确识别了，但是在实际情况下是不能省略的。
+    // 注意点3: @Configuration 默认会为标注的类生成代理, 其目的是保证 @Bean 方法相互调用时, 仍然能保证其单例特性
+        /*@Bean
+        public Bean1 bean1() {
+            相互调用方法的情况下没有依赖关系，先初始化Bean1再初始化Bean2，在有@Configuration情况下bean2()被调用多次，只执行一次，同一单例
+            System.out.println("bean1()");
+            System.out.println(bean2());
+            System.out.println(bean2());
+            System.out.println(bean2());
+            return new Bean1();
+        }*/
+
+        /*@Bean
+        public Bean1 bean1(@Value("${java.class.version}") String a) {
+            System.out.println("bean1(" + a + ")");
+            return new Bean1();
+        }
+
+        @Bean
+        public Bean1 bean1(@Value("${java.class.version}") String a, @Value("${JAVA_HOME}") String b) {
+            System.out.println("bean1(" + a + ", " + b + ")");
+            return new Bean1();
+        }*/
+
+        /*@Bean
+        public Bean2 bean2() {
+            System.out.println("bean2()");
+            return new Bean2();
+        }*/
+
+    // 注意点4: @Configuration 中如果含有 BeanFactory 后处理器（MapperScannerConfigurer）
+    // 在第5个方法invokeBeanFactoryPostProcessors中会使用后处理器对BeanFactory的增强, 则实例工厂方法会导致 MyConfig 提前创建, 造成其依赖注入失败
+    // 标准了注解@Configuration的配置类应在 第11个方法finishBeanFactoryInitialization里被创建
+    // 解决方法是该用静态工厂方法或直接为 @Bean 的方法参数依赖注入, 针对 MapperScanner 可以改用注解方式
+    // 推荐使用静态工厂给 BeanFactory后处理器进行配置，不要让配置类提前创建
+    
+    // 推荐把成员变量version改成局部参数，把@Value放进方法的参数前面，或者使用@ConfigurationProperties(prefix = "java.class")将系统变量中前缀为"java.class"的属性注入
+    // @ConfigurationProperties默认是从application.properties或application.yml文件中读取属性的。
+    // 如果需要读取其他名称和位置的配置文件，需要使用@PropertySource注解指定。比如@PropertySource("classpath:jdbc.properties")
+    @Value("${java.class.version}")
+    private String version;
+
+        /*@Bean
+        public static MapperScannerConfigurer configurer() {
+            MapperScannerConfigurer scanner = new MapperScannerConfigurer();
+            scanner.setBasePackage("aaa");
+            return scanner;
+        }*/
+
+    @Bean
+    public Bean3 bean3() {
+      System.out.println("bean3() " + version);
+      return new Bean3();
+    }
+  }
+
+  static class Bean1 {
+  }
+  static class Bean2 {
+  }
+  static class Bean3 {
+  }
+}
+```
+### 先理解@Import注解用法
+```java
+public class TestImport {
+  public static void main(String[] args) {
+    GenericApplicationContext context = new GenericApplicationContext();
+    AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+    context.registerBean(MyConfig.class);
+    context.refresh();
+
+    for (String name : context.getBeanDefinitionNames()) {
+      System.out.println(name);
+    }
+
+  }
+
+  @Configuration
+//    @Import(Bean1.class) // 1. 引入单个 bean
+//    @Import(OtherConfig.class) // 2. 引入一个配置类，配置类中定义的bean2也会引入Spring容器
+  @Import(MySelector.class) // 3. 通过 Selector 引入多个类，只会把selectImports方法放回的类加入Spring容器
+//    @Import(MyRegistrar.class) // 4. 通过 beanDefinition 注册器，同Selector类MyRegistrar自身也不会加入到Spring容器
+  static class MyConfig {
+
+  }
+
+  
+//  static class MySelector implements ImportSelector {
+  static class MySelector implements DeferredImportSelector {
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+      return new String[]{Bean3.class.getName(), Bean4.class.getName()};
+    }
+  }
+
+  static class MyRegistrar implements ImportBeanDefinitionRegistrar {
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+      registry.registerBeanDefinition("bean5", BeanDefinitionBuilder.genericBeanDefinition(Bean5.class).getBeanDefinition());
+    }
+  }
+
+  static class Bean5 {
+  }
+  static class Bean3 {
+  }
+  static class Bean4 {
+  }
+  static class Bean1 {
+  }
+
+  @Configuration
+  static class OtherConfig {
+    @Bean
+    public Bean2 bean2() {
+      return new Bean2();
+    }
+  }
+
+  static class Bean2 {
+  }
+}
+```
+### 先理解DeferredImportSelector接口
+```java
+public class TestDeferredImport {
+
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        DefaultListableBeanFactory beanFactory = context.getDefaultListableBeanFactory();
+        beanFactory.setAllowBeanDefinitionOverriding(false); // 不允许同名定义覆盖，定义Bean同名时会抛出异常
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(beanFactory);
+        context.registerBean(MyConfig.class);
+        context.refresh();
+
+        System.out.println(context.getBean(MyBean.class));
+    }
+
+    // 1. 同一配置类中, @Import 先解析  @Bean 后解析
+    // 2. 同名定义, 默认后面解析的会覆盖前面解析的
+    // 3. 不允许覆盖的情况下, 如何能够让 MyConfig(主配置类) 的配置优先? (虽然覆盖方式能解决)
+    // 4. DeferredImportSelector 最后工作, 可以简单认为先解析 @Bean, 再 Import
+    // SpringBoot的自动装配一般@Import的类都是实现了DeferredImportSelector接口，让选择器延时引入，等主配置类的Bean都处理完了，才处理从配置类的Bean，这时条件检查才能生效
+    @Configuration
+    @Import(MySelector.class)
+    static class MyConfig { // 主配置 - 程序员编写的
+        @Bean
+        public MyBean myBean() {
+            return new Bean1();
+        }
+    }
+
+    static class MySelector implements DeferredImportSelector {
+
+        @Override
+        public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+            return new String[]{OtherConfig.class.getName()};
+        }
+    }
+
+    @Configuration
+    static class OtherConfig { // 从属配置 - 自动配置
+        @Bean
+        @ConditionalOnMissingBean
+        public MyBean myBean() {
+            return new Bean2();
+        }
+    }
+
+    interface MyBean {
+    }
+    static class Bean1 implements MyBean {
+    }
+    static class Bean2 implements MyBean {
+    }
+}
+```
+
+
 
 
 
