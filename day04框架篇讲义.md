@@ -662,8 +662,190 @@ public class TestInitialization {
   * 最后 destroyMethod 销毁（包括自定义名称，推断名称，AutoCloseable 接口 多选一）
 
 
+### 循环依赖铺垫
+* 切面DefaultPointcutAdvisor、切点AspectJExpressionPointcut、通知MethodInterceptor
+```java
 
-## 3. Spring bean 循环依赖
+public class App64_2 {
+    public static void main(String[] args) {
+        // aspect = 通知（advice）+切点（pointcut），一个切面类中可能有一个到多个通知方法
+        // advisor = 更细粒度的切面，包含一个通知和切点
+
+        ProxyFactory proxyFactory = new ProxyFactory();
+        proxyFactory.setTarget(new Target1()); // 设置目标对象
+
+        /*proxyFactory.addAdvice(new MethodInterceptor() { // 类似环绕通知
+            @Override
+            public Object invoke(MethodInvocation methodInvocation) throws Throwable {
+                try {
+                    System.out.println("before...");
+                    return methodInvocation.proceed();
+                }finally {
+                    System.out.println("after...");
+                }
+
+            }
+        });*/
+        // 不要每个方法都做功能增强，增加切点实现类
+        AspectJExpressionPointcut aspectJExpressionPointcut = new AspectJExpressionPointcut();
+        aspectJExpressionPointcut.setExpression("execution(* foo())");
+
+        MethodInterceptor methodInterceptor = new MethodInterceptor() { // 类似环绕通知
+            @Override
+            public Object invoke(MethodInvocation methodInvocation) throws Throwable {
+                try {
+                    System.out.println("before...");
+                    return methodInvocation.proceed();
+                } finally {
+                    System.out.println("after...");
+                }
+
+            }
+        };
+        proxyFactory.addAdvisor(new DefaultPointcutAdvisor(aspectJExpressionPointcut, methodInterceptor));
+
+
+        Target1 target1 = (Target1)proxyFactory.getProxy();
+        // 生成子类作为代理（CGLIB），org.springframework.aop.framework.autoproxy.App64_2$Target$$EnhancerBySpringCGLIB$$0674e78
+        System.out.println(target1.getClass());
+        target1.bar();
+        target1.foo();
+
+//        proxyFactory.addInterface(I1.class);
+//        I1 I1 = (I1)proxyFactory.getProxy();
+//        org.springframework.aop.framework.autoproxy.$Proxy0（jdk代理）
+        // 统一用CGLIB生成代理对象
+//        proxyFactory.setExposeProxy(true);
+    }
+
+    interface I1{
+        void foo();
+        void bar();
+    }
+
+    static class Target1 implements I1{
+        public void foo(){
+            System.out.println("target1 foo");
+        }
+
+        public void bar() {
+            System.out.println("target1 bar");
+        }
+    }
+}
+```
+* 注解形式 与 wrapIfNecessary方法
+```java
+package org.springframework.aop.framework.autoproxy;
+public class App64_1 {
+  public static void main(String[] args) {
+    GenericApplicationContext genericApplicationContext = new GenericApplicationContext();
+    genericApplicationContext.registerBean("aspect1", Ascpect1.class);
+    genericApplicationContext.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+
+    genericApplicationContext.registerBean("target1", Target1.class);
+    genericApplicationContext.registerBean("target2", Target2.class);
+
+    genericApplicationContext.refresh();
+
+    Target1 target1 = genericApplicationContext.getBean(Target1.class);
+    target1.foo();
+    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>");
+
+    Target2 target2 = genericApplicationContext.getBean(Target2.class);
+    target2.bar();
+
+    AnnotationAwareAspectJAutoProxyCreator creator = genericApplicationContext.getBean(AnnotationAwareAspectJAutoProxyCreator.class);
+    // wrapIfNecessary为保护方法，改为同包下调用 package org.springframework.aop.framework.autoproxy;
+
+    Object o = creator.wrapIfNecessary(new Ascpect1(), "ascpect1", "ascpect1");
+    // wrapIfNecessary会检查是否需要创建代理对象，如果没有切点匹配则不创建代理（类型为springaop的$内部类，而不是CGLIB代理对象）
+    // class org.springframework.aop.framework.autoproxy.App64_1$Ascpect1
+    // isInfrastructureClass()是否是基础设施类型，排除切点切面通知类
+    // getAdvicesAndAdvisorsForBean放回切面
+    // createProxy创建代理使用ProxyFactory
+    System.out.println(o.getClass());
+  }
+
+  static class Target1{
+    public void foo(){
+      System.out.println("target1 foo");
+    }
+  }
+  static class Target2{
+    public void bar(){
+      System.out.println("target1 foo");
+    }
+  }
+
+  @Aspect
+  static class Ascpect1{
+    @Around("execution(* foo())") // 一个advisor切面
+//      @Around() 和 @After() @Before都是实现了MethodInterceptor
+    public Object arround(ProceedingJoinPoint pjp) throws Throwable{
+      System.out.println("aspect1 around");
+      return pjp.proceed();
+    }
+  }
+}
+```
+
+**创建代理的时机**
+* org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator
+* 如果有自定义的TargetSource
+```java
+public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
+    m(){
+      TargetSource targetSource = this.getCustomTargetSource(beanClass, beanName);
+      if (targetSource != null) {
+        if (StringUtils.hasLength(beanName)) {
+          this.targetSourcedBeans.add(beanName);
+        }
+
+        Object[] specificInterceptors = this.getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource);
+        Object proxy = this.createProxy(beanClass, beanName, specificInterceptors, targetSource);
+      }
+    }
+}
+```
+* 工厂对象调用wrapIfNecessary提前创建代理对象（循环依赖时）
+```java
+public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
+  public Object getEarlyBeanReference(Object bean, String beanName) {
+    Object cacheKey = this.getCacheKey(bean.getClass(), beanName);
+    this.earlyProxyReferences.put(cacheKey, bean);
+    return this.wrapIfNecessary(bean, beanName, cacheKey);
+  }
+}
+```
+* 初始化之后（通常bean创建代理对象）
+```java
+public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
+  public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
+    if (bean != null) {
+      Object cacheKey = this.getCacheKey(bean.getClass(), beanName);
+      if (this.earlyProxyReferences.remove(cacheKey) != bean) {
+        return this.wrapIfNecessary(bean, beanName, cacheKey);
+      }
+    }
+
+    return bean;
+  }
+}
+```
+
+**小结**
+* 最基本切面是Advisor，一个Aspect切面对应一到多个Advisor
+* 最基本的Advice是MethodInterceptor，其他Advice最终将适配为MethodInterceptor
+* 创建代理
+  * 实现了用户自定义接口，采用jdk动态代理
+  * 没有实现接口，采用cglib代理
+  * 设置了setProxyTargetClass(true)，统一采用cglib代理
+* 切面、切点、通知不会被代理
+* AnnotationAwareAspectJAutoProxyCreator调用时机：创建阶段、依赖注入阶段、**初始化阶段**
+
+
+## 3. Spring bean 循环依赖（置后）
 
 **要求**
 
@@ -2047,8 +2229,6 @@ public class TestAutoConfiguration {
 }
 ```
 
-
-
 ### 先理解@Configuration
 ```java
 public class TestConfiguration {
@@ -2248,10 +2428,6 @@ public class TestDeferredImport {
 }
 ```
 
-
-
-
-
 ## 8. Spring 中的设计模式
 
 **要求**
@@ -2276,7 +2452,7 @@ public class TestDeferredImport {
 定义 *Separate the construction of a complex object from its representation so that the same construction process can create different representations* 
 
 它的主要亮点有三处：
-
+* 构建器
 1. 较为灵活的构建产品对象
 
 2. 在不执行最后 build 方法前，产品对象都不可用
@@ -2294,6 +2470,8 @@ Spring 中体现 Builder 模式的地方：
 * org.springframework.http.ResponseEntity.BodyBuilder
 
 **3. Spring 中的 Factory Method**
+
+* 接口和实现 相分离
 
 定义 *Define an interface for creating an object, but let subclasses decide which class to instantiate. Factory Method lets a class defer instantiation to subclasses* 
 
@@ -2314,7 +2492,7 @@ Spring 中其它工厂：
 定义 *Convert the interface of a class into another interface clients expect. Adapter lets classes work together that couldn't otherwise because of incompatible interfaces* 
 
 典型的实现有两处：
-
+* 适配器模式
 * org.springframework.web.servlet.HandlerAdapter – 因为控制器实现有各种各样，比如有
   * 大家熟悉的 @RequestMapping 标注的控制器实现
   * 传统的基于 Controller 接口（不是 @Controller注解啊）的实现
@@ -2327,7 +2505,7 @@ Spring 中其它工厂：
 定义 *Compose objects into tree structures to represent part-whole hierarchies. Composite lets clients treat individual objects and compositions of objects uniformly* 
 
 典型实现有：
-
+* 组合模式
 * org.springframework.web.method.support.HandlerMethodArgumentResolverComposite
 * org.springframework.web.method.support.HandlerMethodReturnValueHandlerComposite
 * org.springframework.web.servlet.handler.HandlerExceptionResolverComposite
@@ -2339,6 +2517,7 @@ composite 对象的作用是，将分散的调用集中起来，统一调用入�
 
 定义 *Attach additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending functionality* 
 
+* 装饰器模式
 典型实现：
 
 * org.springframework.web.util.ContentCachingRequestWrapper
@@ -2349,6 +2528,7 @@ composite 对象的作用是，将分散的调用集中起来，统一调用入�
 
 装饰器模式注重的是功能增强，避免子类继承方式进行功能扩展，而代理模式更注重控制目标的访问
 
+* 代理模式
 典型实现：
 
 * org.springframework.aop.framework.JdkDynamicAopProxy
@@ -2358,6 +2538,7 @@ composite 对象的作用是，将分散的调用集中起来，统一调用入�
 
 定义 *Avoid coupling the sender of a request to its receiver by giving more than one object a chance to handle the request. Chain the receiving objects and pass the request along the chain until an object handles it* 
 
+* 责任链模式
 典型实现：
 
 * org.springframework.web.servlet.HandlerInterceptor
@@ -2366,6 +2547,7 @@ composite 对象的作用是，将分散的调用集中起来，统一调用入�
 
 定义 *Define a one-to-many dependency between objects so that when one object changes state, all its dependents are notified and updated automatically* 
 
+* 观察者模式
 典型实现：
 
 * org.springframework.context.ApplicationListener
@@ -2376,6 +2558,7 @@ composite 对象的作用是，将分散的调用集中起来，统一调用入�
 
 定义 *Define a family of algorithms, encapsulate each one, and make them interchangeable. Strategy lets the algorithm vary independently from clients that use it* 
 
+*策略模式
 典型实现：
 
 * org.springframework.beans.factory.support.InstantiationStrategy
@@ -2386,6 +2569,7 @@ composite 对象的作用是，将分散的调用集中起来，统一调用入�
 
 定义 *Define the skeleton of an algorithm in an operation, deferring some steps to subclasses. Template Method lets subclasses redefine certain steps of an algorithm without changing the algorithm's structure* 
 
+* 模板方法
 典型实现：
 
 * 大部分以 Template 命名的类，如 JdbcTemplate，TransactionTemplate
