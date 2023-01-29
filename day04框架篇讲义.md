@@ -1507,7 +1507,7 @@ public class AccountController {
 }
 ```
 
-App 配置类
+App 配置类（父配置类有事务）
 
 ```java
 @Configuration
@@ -1519,7 +1519,7 @@ public class AppConfig {
 }
 ```
 
-Web 配置类
+Web 配置类（子配置类无事务）
 
 ```java
 @Configuration
