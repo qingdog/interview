@@ -1,0 +1,78 @@
+package day04.mypatch.early;
+
+import org.apache.tools.ant.taskdefs.Sync;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.AnnotationConfigUtils;
+import org.springframework.context.support.GenericApplicationContext;
+
+import javax.annotation.PostConstruct;
+
+// set循环依赖被Spring处理了
+public class App60_5 {
+    static class A {
+        private static final Logger log = LoggerFactory.getLogger("A");
+        private B b;
+
+        public A() {
+            log.debug("A()...");
+        }
+
+        @Autowired
+        public void setB(B b){
+            log.debug("setB(){}");
+            this.b = b;
+        }
+        @PostConstruct
+        public void init(){
+            log.debug("init()...");
+        }
+
+        public void foo(){}
+    }
+
+    @Aspect
+    static class MyAspect{
+        @Before("execution(* foo())")
+        public void before(){
+            System.out.println("before...");
+        }
+    }
+
+    static class B{
+        private static final Logger log = LoggerFactory.getLogger("B");
+        private A a;
+
+        public B(){
+            log.debug("B()...");
+        }
+
+        @Autowired
+        public void setA(A a){
+            log.debug("setA(){}");
+            this.a =a;
+        }
+
+        @PostConstruct
+        public void init(){
+            log.debug("init()...");
+        }
+    }
+
+    public static void main(String[] args) {
+        GenericApplicationContext context = new GenericApplicationContext();
+        context.registerBean("a", A.class);
+        context.registerBean("b", B.class);
+        // 后处理处理注解（AutowiredAnnotationBeanPostProcessor 、CommonAnnotationBeanPostProcessor ）@Autowired @PostConstruct
+        AnnotationConfigUtils.registerAnnotationConfigProcessors(context.getDefaultListableBeanFactory());
+
+        context.registerBean(MyAspect.class);
+        context.registerBean(AnnotationAwareAspectJAutoProxyCreator.class);
+
+        context.refresh();
+    }
+}

@@ -2075,7 +2075,7 @@ composite 对象的作用是，将分散的调用集中起来，统一调用入�
 * 很多以 Abstract 命名的类，如 AbstractApplicationContext
 
 
-## 循环依赖铺垫
+## 9.循环依赖铺垫
 * 切面DefaultPointcutAdvisor、切点AspectJExpressionPointcut、通知MethodInterceptor
 ```java
 
