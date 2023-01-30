@@ -2076,7 +2076,7 @@ composite 对象的作用是，将分散的调用集中起来，统一调用入�
 
 
 ## 9.循环依赖铺垫
-* 切面DefaultPointcutAdvisor、切点AspectJExpressionPointcut、通知MethodInterceptor
+### 切面DefaultPointcutAdvisor、切点AspectJExpressionPointcut、通知MethodInterceptor
 ```java
 
 public class App64_2 {
@@ -2147,7 +2147,7 @@ public class App64_2 {
     }
 }
 ```
-* 注解形式 与 wrapIfNecessary方法
+### 注解形式 与 wrapIfNecessary方法
 ```java
 package org.springframework.aop.framework.autoproxy;
 public class App64_1 {
@@ -2203,7 +2203,7 @@ public class App64_1 {
 }
 ```
 
-**创建代理的时机**
+### 创建代理的时机
 * org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator
 * 如果有自定义的TargetSource
 ```java
@@ -2221,7 +2221,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport imp
     }
 }
 ```
-* 工厂对象调用wrapIfNecessary提前创建代理对象（循环依赖时）
+### 工厂对象调用wrapIfNecessary提前创建代理对象（循环依赖时）
 ```java
 public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
   public Object getEarlyBeanReference(Object bean, String beanName) {
@@ -2231,7 +2231,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport imp
   }
 }
 ```
-* 初始化之后（通常bean创建代理对象）
+### 初始化之后（通常bean创建代理对象）
 ```java
 public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
   public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
@@ -2247,7 +2247,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport imp
 }
 ```
 
-**小结**
+### 小结
 * 最基本切面是Advisor，一个Aspect切面对应一到多个Advisor
 * 最基本的Advice是MethodInterceptor，其他Advice最终将适配为MethodInterceptor
 * 创建代理
@@ -2328,8 +2328,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport imp
 
 当成品对象产生，放入 singletonObject 后，singletonFactories 和 earlySingletonObjects 就中的对象就没有用处，清除即可
 
+### set循环依赖被Spring处理了
 ```java
-// set循环依赖被Spring处理了
 public class App60 {
     static class A {
         private static final Logger log = LoggerFactory.getLogger("A");
@@ -2446,10 +2446,10 @@ public class App60_5 {
 }
 ```
 
+
+
+### 循环依赖的产生
 * 掌握其它循环依赖的解决方法
-
-**循环依赖的产生**
-
 * 首先要明白，bean 的创建要遵循一定的步骤，必须是创建、注入、初始化三步，这些顺序不能乱
 
 <img src="img/day04/image-20210903085238916.png" alt="image-20210903085238916" style="zoom:50%;" />
@@ -2481,8 +2481,7 @@ public class App60_5 {
 
 <img src="img/day04/image-20210903091743366.png" alt="image-20210903091743366" style="zoom:50%;" />
 
-* 示例1：用 @Lazy 为构造方法参数生成代理
-
+### 示例1：用 @Lazy 为构造方法参数生成代理
 ```java
 // @lazy创建代理对象延迟加载
 public class App60_1 {
@@ -2528,7 +2527,7 @@ public class App60_1 {
 }
 ```
 
-* 示例2：用 ObjectProvider 延迟依赖对象的创建（推荐）
+### 示例2：用 ObjectProvider 延迟依赖对象的创建（推荐）
 
 ```java
 // ObjectProvider对象工厂延迟对象创建/ObjectFactory/Provider（jsr330）
@@ -2577,7 +2576,7 @@ public class App60_2 {
 }
 ```
 
-* 示例3：用 @Scope 产生代理（不推荐）
+### 示例3：用 @Scope 产生代理（不推荐）
 
 ```java
 public class App60_3 {
@@ -2629,7 +2628,7 @@ class B {
 }
 ```
 
-* 示例4：用 Provider 接口解决，原理上与 ObjectProvider 一样，Provider 接口是独立的 jar 包，需要加入依赖
+### 示例4：用 Provider 接口解决，原理上与 ObjectProvider 一样，Provider 接口是独立的 jar 包，需要加入依赖
 
 ```xml
 <dependency>
