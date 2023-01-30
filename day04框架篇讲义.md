@@ -2172,11 +2172,11 @@ public class App64_1 {
     // wrapIfNecessary为保护方法，改为同包下调用 package org.springframework.aop.framework.autoproxy;
 
     Object o = creator.wrapIfNecessary(new Ascpect1(), "ascpect1", "ascpect1");
-    // wrapIfNecessary会检查是否需要创建代理对象，如果没有切点匹配则不创建代理（类型为springaop的$内部类，而不是CGLIB代理对象）
+    // wrapIfNecessary会检查是否需要创建代理对象，与切点表达式匹配才需要创建代理（类型为springaop的$内部类，而不是CGLIB代理对象）
     // class org.springframework.aop.framework.autoproxy.App64_1$Ascpect1
-    // isInfrastructureClass()是否是基础设施类型，排除切点切面通知类
-    // getAdvicesAndAdvisorsForBean放回切面
-    // createProxy创建代理使用ProxyFactory
+    // isInfrastructureClass()是否是基础设施类型，切点切面通知类属于infrastructure，不需要重复创建代理
+    // getAdvicesAndAdvisorsForBean()返回切面
+    // createProxy()创建代理使用ProxyFactory创建
     System.out.println(o.getClass());
   }
 
