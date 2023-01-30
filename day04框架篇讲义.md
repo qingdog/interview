@@ -2262,6 +2262,72 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport imp
 **要求**
 
 * 掌握单例 set 方式循环依赖的原理
+
+### 解决 set 循环依赖的原理
+
+**一级缓存**
+
+<img src="img/day04/image-20210903100752165.png" alt="image-20210903100752165" style="zoom:80%;" />
+
+作用是保证单例对象仅被创建一次
+
+* 第一次走 `getBean("a")` 流程后，最后会将成品 a 放入 singletonObjects 一级缓存
+* 后续再走 `getBean("a")` 流程时，先从一级缓存中找，这时已经有成品 a，就无需再次创建
+
+**一级缓存与循环依赖**
+
+<img src="img/day04/image-20210903100914140.png" alt="image-20210903100914140" style="zoom:80%;" />
+
+一级缓存无法解决循环依赖问题，分析如下
+
+* 无论是获取 bean a 还是获取 bean b，走的方法都是同一个 getBean 方法，假设先走 `getBean("a")`
+* 当 a 的实例对象创建，接下来执行 `a.setB()` 时，需要走 `getBean("b")` 流程，红色箭头 1
+* 当 b 的实例对象创建，接下来执行 `b.setA()` 时，又回到了 `getBean("a")` 的流程，红色箭头 2
+* 但此时 singletonObjects 一级缓存内没有成品的 a，陷入了死循环
+
+**二级缓存**
+
+<img src="img/day04/image-20210903101849924.png" alt="image-20210903101849924" style="zoom:80%;" />
+
+解决思路如下：
+
+* 再增加一个 singletonFactories 缓存
+* 在依赖注入前，即 `a.setB()` 以及 `b.setA()` 将 a 及 b 的半成品对象（未完成依赖注入和初始化）放入此缓存
+* 执行依赖注入时，先看看 singletonFactories 缓存中是否有半成品的对象，如果有拿来注入，顺利走完流程
+
+对于上面的图
+
+* `a = new A()` 执行之后就会把这个半成品的 a 放入 singletonFactories 缓存，即 `factories.put(a)`
+* 接下来执行 `a.setB()`，走入 `getBean("b")` 流程，红色箭头 3
+* 这回再执行到 `b.setA()` 时，需要一个 a 对象，有没有呢？有！
+* `factories.get()` 在 singletonFactories  缓存中就可以找到，红色箭头 4 和 5
+* b 的流程能够顺利走完，将 b 成品放入 singletonObject 一级缓存，返回到 a 的依赖注入流程，红色箭头 6
+
+**二级缓存与创建代理**
+
+<img src="img/day04/image-20210903103030877.png" alt="image-20210903103030877" style="zoom:80%;" />
+
+二级缓存无法正确处理循环依赖并且包含有代理创建的场景，分析如下
+
+* spring 默认要求，在 `a.init` 完成之后才能创建代理 `pa = proxy(a)`
+* 由于 a 的代理创建时机靠后，在执行 `factories.put(a)` 向 singletonFactories 中放入的还是原始对象
+* 接下来箭头 3、4、5 这几步 b 对象拿到和注入的都是原始对象
+
+**三级缓存**
+
+![image-20210903103628639](img/day04/image-20210903103628639.png)
+
+简单分析的话，只需要将代理的创建时机放在依赖注入之前即可，但 spring 仍然希望代理的创建时机在 init 之后，只有出现循环依赖时，才会将代理的创建时机提前。所以解决思路稍显复杂：
+
+* 图中 `factories.put(fa)` 放入的既不是原始对象，也不是代理对象而是工厂对象 fa
+* 当检查出发生循环依赖时，fa 的产品就是代理 pa，没有发生循环依赖，fa 的产品是原始对象 a
+* 假设出现了循环依赖，拿到了 singletonFactories 中的工厂对象，通过在依赖注入前获得了 pa，红色箭头 5
+* 这回 `b.setA()` 注入的就是代理对象，保证了正确性，红色箭头 7
+* 还需要把 pa 存入新加的 earlySingletonObjects 缓存，红色箭头 6
+* `a.init` 完成后，无需二次创建代理，从哪儿找到 pa 呢？earlySingletonObjects 已经缓存，蓝色箭头 9
+
+当成品对象产生，放入 singletonObject 后，singletonFactories 和 earlySingletonObjects 就中的对象就没有用处，清除即可
+
 ```java
 // set循环依赖被Spring处理了
 public class App60 {
@@ -2315,7 +2381,6 @@ public class App60 {
 }
 ```
 ```java
-// set循环依赖被Spring处理了
 public class App60_5 {
     static class A {
         private static final Logger log = LoggerFactory.getLogger("A");
@@ -2419,6 +2484,7 @@ public class App60_5 {
 * 示例1：用 @Lazy 为构造方法参数生成代理
 
 ```java
+// @lazy创建代理对象延迟加载
 public class App60_1 {
 
     static class A {
@@ -2462,9 +2528,10 @@ public class App60_1 {
 }
 ```
 
-* 示例2：用 ObjectProvider 延迟依赖对象的创建
+* 示例2：用 ObjectProvider 延迟依赖对象的创建（推荐）
 
 ```java
+// ObjectProvider对象工厂延迟对象创建/ObjectFactory/Provider（jsr330）
 public class App60_2 {
 
     static class A {
@@ -2510,7 +2577,7 @@ public class App60_2 {
 }
 ```
 
-* 示例3：用 @Scope 产生代理
+* 示例3：用 @Scope 产生代理（不推荐）
 
 ```java
 public class App60_3 {
@@ -2543,8 +2610,6 @@ class A {
 }
 ```
 
-
-
 ```java
 @Scope(proxyMode = ScopedProxyMode.TARGET_CLASS)
 @Component
@@ -2564,8 +2629,6 @@ class B {
 }
 ```
 
-
-
 * 示例4：用 Provider 接口解决，原理上与 ObjectProvider 一样，Provider 接口是独立的 jar 包，需要加入依赖
 
 ```xml
@@ -2575,8 +2638,6 @@ class B {
     <version>1</version>
 </dependency>
 ```
-
-
 
 ```java
 public class App60_4 {
@@ -2623,68 +2684,15 @@ public class App60_4 {
     }
 }
 ```
-
-### 解决 set 循环依赖的原理
-
-**一级缓存**
-
-<img src="img/day04/image-20210903100752165.png" alt="image-20210903100752165" style="zoom:80%;" />
-
-作用是保证单例对象仅被创建一次
-
-* 第一次走 `getBean("a")` 流程后，最后会将成品 a 放入 singletonObjects 一级缓存
-* 后续再走 `getBean("a")` 流程时，先从一级缓存中找，这时已经有成品 a，就无需再次创建
-
-**一级缓存与循环依赖**
-
-<img src="img/day04/image-20210903100914140.png" alt="image-20210903100914140" style="zoom:80%;" />
-
-一级缓存无法解决循环依赖问题，分析如下
-
-* 无论是获取 bean a 还是获取 bean b，走的方法都是同一个 getBean 方法，假设先走 `getBean("a")`
-* 当 a 的实例对象创建，接下来执行 `a.setB()` 时，需要走 `getBean("b")` 流程，红色箭头 1
-* 当 b 的实例对象创建，接下来执行 `b.setA()` 时，又回到了 `getBean("a")` 的流程，红色箭头 2
-* 但此时 singletonObjects 一级缓存内没有成品的 a，陷入了死循环
-
-**二级缓存**
-
-<img src="img/day04/image-20210903101849924.png" alt="image-20210903101849924" style="zoom:80%;" />
-
-解决思路如下：
-
-* 再增加一个 singletonFactories 缓存
-* 在依赖注入前，即 `a.setB()` 以及 `b.setA()` 将 a 及 b 的半成品对象（未完成依赖注入和初始化）放入此缓存
-* 执行依赖注入时，先看看 singletonFactories 缓存中是否有半成品的对象，如果有拿来注入，顺利走完流程
-
-对于上面的图
-
-* `a = new A()` 执行之后就会把这个半成品的 a 放入 singletonFactories 缓存，即 `factories.put(a)`
-* 接下来执行 `a.setB()`，走入 `getBean("b")` 流程，红色箭头 3
-* 这回再执行到 `b.setA()` 时，需要一个 a 对象，有没有呢？有！
-* `factories.get()` 在 singletonFactories  缓存中就可以找到，红色箭头 4 和 5
-* b 的流程能够顺利走完，将 b 成品放入 singletonObject 一级缓存，返回到 a 的依赖注入流程，红色箭头 6
-
-**二级缓存与创建代理**
-
-<img src="img/day04/image-20210903103030877.png" alt="image-20210903103030877" style="zoom:80%;" />
-
-二级缓存无法正确处理循环依赖并且包含有代理创建的场景，分析如下
-
-* spring 默认要求，在 `a.init` 完成之后才能创建代理 `pa = proxy(a)`
-* 由于 a 的代理创建时机靠后，在执行 `factories.put(a)` 向 singletonFactories 中放入的还是原始对象
-* 接下来箭头 3、4、5 这几步 b 对象拿到和注入的都是原始对象
-
-**三级缓存**
-
-![image-20210903103628639](img/day04/image-20210903103628639.png)
-
-简单分析的话，只需要将代理的创建时机放在依赖注入之前即可，但 spring 仍然希望代理的创建时机在 init 之后，只有出现循环依赖时，才会将代理的创建时机提前。所以解决思路稍显复杂：
-
-* 图中 `factories.put(fa)` 放入的既不是原始对象，也不是代理对象而是工厂对象 fa
-* 当检查出发生循环依赖时，fa 的产品就是代理 pa，没有发生循环依赖，fa 的产品是原始对象 a
-* 假设出现了循环依赖，拿到了 singletonFactories 中的工厂对象，通过在依赖注入前获得了 pa，红色箭头 5
-* 这回 `b.setA()` 注入的就是代理对象，保证了正确性，红色箭头 7
-* 还需要把 pa 存入新加的 earlySingletonObjects 缓存，红色箭头 6
-* `a.init` 完成后，无需二次创建代理，从哪儿找到 pa 呢？earlySingletonObjects 已经缓存，蓝色箭头 9
-
-当成品对象产生，放入 singletonObject 后，singletonFactories 和 earlySingletonObjects 就中的对象就没有用处，清除即可
+### 小结
+* 单例set方法（包括成员变量）循环依赖，Spring会利用三级缓存解决，无需额外配置
+  * 一级缓存 存放成品对象
+  * 二级缓存 存放发生了循环依赖时的产品对象（可能是原始bean，也可能是代理bean）
+  * 三级缓存 存放工厂对象，发生循环依赖时，会调用工厂获取产品
+  * Spring期望在初始化时创建代理，但如果发生了循环依赖，会由工厂提前创建代理，后续初始化时就不必重新创建代理（存放在二级）
+  * 二级缓存的意义在于，如果提前创建了代理对象，在最后的阶段需要从二级缓存中获取此代理对象，作为最终结果
+* 构造方法及多例循环依赖解决方法
+  * @Lazy
+  * ObjectFactory&@ObjectProvider
+  * @Scope
+  * Provider
