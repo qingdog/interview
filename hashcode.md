@@ -102,6 +102,8 @@ the hashCode method defined by class Object does return distinct integers for di
 but this implementation technique is not required by the Java™ programming language.)
 ```
 **谷歌翻译：**
+* https://github.com/qingdog/interview/blob/master/resources/translate.html
+
 在相当实用的情况下，类 Object 定义的 hashCode 方法确实会为不同的对象返回不同的整数。 （这通常是通过将对象的内部地址转换为整数来实现的，但 Java™ 编程语言不需要这种实现技术。）
 
 通过上面的描述我们知道，一般情况下hashCode是通过对象的内存地址映射过来的。这也应该就是开篇说的“hashCode是根据对象地址生成的”的来源吧。
@@ -604,98 +606,3 @@ _hashStateW = 273326509 ;
 
 版权声明：本文为CSDN博主「fengting1995」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
 原文链接：https://blog.csdn.net/fengting1995/article/details/121186166
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Chrome网页翻译测试</title>
-</head>
-<body>
-<div>
-    <div style="display:flex;column-gap:10px;">
-        <div style="flex:1;">
-            <label style="font-size:.85em;">※ 输入英文</label>
-            <label>
-                <textarea placeholder="输入英文" style="display:block;padding:10px;border:2px solid #666;border-radius:5px;box-sizing:border-box;width:100%;resize: vertical;">Hello World!</textarea>
-            </label>
-        </div>
-        <div style="flex:1;">
-            <label style="font-size:.85em;">※ 翻译结果</label>
-            <label>
-                <textarea placeholder="翻译结果" style="display:block;padding:10px;border:2px solid #666;border-radius:5px;box-sizing:border-box;width:100%;resize: vertical;"></textarea>
-            </label>
-        </div>
-    </div>
-    <div style="margin-top:10px;">
-        <input type="submit" value="测试一下" style="margin:0 auto;padding:5px 10px;border:1px solid #ccc;border-radius:5px;width:100%;">
-    </div>
-</div>
-</body>
-<script>
-    window.onload = function(){
-        const input = document.querySelector('input');
-        input.onclick = function (){
-            const xhr = new XMLHttpRequest();
-
-            const api = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&hl=en-US&dt=t&dt=bd&dj=1&source=icon&tk=294611.294611&q=";
-            const url = new URL(api);
-            url.searchParams.set('q', document.getElementsByTagName("textarea")[0].value);
-
-            xhr.open('post', url.href, true);
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-
-            document.getElementsByTagName("textarea")[1].value = "翻译中。。。";
-            xhr.onload = function () {
-                if (xhr.status === 200) {
-                    const json = JSON.parse(xhr.responseText);
-                    let value = "";
-                    for(let i = 0; i < json.sentences.length; i++){
-                        value += json.sentences[i].trans;
-                    }
-                    document.getElementsByTagName("textarea")[1].value = value;
-                    console.log(json);
-                } else {
-                    document.getElementsByTagName("textarea")[1].value = "翻译出错。";
-                }
-            };
-            // 处理net::ERR_CONNECTION_TIMED_OUT
-            xhr.timeout = 5000; // 设置超时时间为 5000 毫秒
-            xhr.ontimeout = function () {
-                document.getElementsByTagName("textarea")[1].value = "请求 API 失败。";
-            };
-            xhr.send();
-        }
-
-
-        // input.addEventListener('click', (event) => {
-        //     event.preventDefault();
-        //
-        //     const token = "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";
-        //     send(token);
-        // });
-    }
-    function send(token){
-        document.getElementsByTagName("textarea")[1].value = "发送中。。。";
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('post', "https://api.openai.com/v1/completions", true);
-
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-
-        xhr.onload = function () {
-            if (xhr.status === 200) {
-                const json = JSON.parse(xhr.responseText);
-                document.getElementsByTagName("textarea")[1].value = json.choices[0].text;
-                console.log(json);
-            }
-        };
-
-        const value = document.getElementsByTagName("textarea")[0].value;
-        const json = {model: 'text-davinci-003', max_tokens: 2048, prompt: value};
-        //console.log(json);
-        xhr.send(JSON.stringify(json));
-    }
-</script>
-</html>
