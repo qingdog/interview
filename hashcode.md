@@ -623,6 +623,10 @@ _hashStateW = 273326509 ;
 **Java中HashCode的实现：**
 
 在Java中Object.class中有hashCode方法，方法是 native 方法，实现就是在JVM中实现的，也就是说他是使用C语言实现的。
+使用native关键字说明这个方法是原生函数，也就是这个方法是用C/C++语言实现的，并且被编译成了DLL，由java去调用。
+这些函数的实现体在DLL中，JDK的源代码中并不包含，你应该是看不到的。对于不同的平台它们也是不同的。
+这也是java的底层机制，实际上java就是在不同的平台上调用不同的native方法实现对操作系统的访问的。
+
 实现方式：OpenJDK8 默认hashCode的计算方法是通过和当前线程有关的一个随机数+三个确定值，
 运用Marsaglia's xorshift scheme随机数算法得到的一个随机数。和对象内存地址无关。
 三个确定确定值分别是：
@@ -659,7 +663,7 @@ class AAA{
 ```
 2.测试方式1
 ```java
-public static void main(String[] args) {
+    public static void main(String[] args) {
         AAA aaa = new AAA();
         System.out.println("---------before invoke hascode()-----------------");
         System.out.println(ClassLayout.parseInstance(aaa).toPrintable());
@@ -669,11 +673,11 @@ public static void main(String[] args) {
         System.out.println("------------after invoke hascode()-----------------");
         System.out.println(ClassLayout.parseInstance(aaa).toPrintable());
 
-synchronized (aaa){
-        System.out.println("---------in synchronized() func--------------");
-        System.out.println(Integer.toHexString(aaa.hashCode()));
-        System.out.println(ClassLayout.parseInstance(aaa).toPrintable());
-        System.out.println(Integer.toHexString(aaa.hashCode()));
+        synchronized (aaa){
+            System.out.println("---------in synchronized() func--------------");
+            System.out.println(Integer.toHexString(aaa.hashCode()));
+            System.out.println(ClassLayout.parseInstance(aaa).toPrintable());
+            System.out.println(Integer.toHexString(aaa.hashCode()));
         }
 
         System.out.println("---------after invoke  synchronized()--------------");
