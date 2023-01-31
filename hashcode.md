@@ -71,7 +71,11 @@ The memory address is 31856221536
 **小结**
 通过与朋友的一个小交流，深挖一下，竟然发现不少底层的知识点，交流和探索的作用可见一斑。总结来说就是：JVM在GC操作时会自动维护引用地址，变量对应的应用地址是否变化要看采用的是基于句柄池方式还是直接指针指向的方式。同时，当我们通过toString方法打印时，输出的内容并不包含对象地址，只不过是对象hashcode的十六进制而已。
 
+原创 二师兄 程序新视界 2021-04-06 22:50
+https://mp.weixin.qq.com/s/rKEdTxXIc8F8ZwGW-hTakg
+
 ## GC时对象地址变了，hashCode如何保持不变？
+
 **前言**
 
 前几天跟朋友交流，引出了一篇文章《GC复制存活对象，它内存地址变了么？》，我们得知在Hotspot虚拟机下，当GC发生时，对象的地址是会发生变化的。
@@ -91,12 +95,15 @@ The memory address is 31856221536
 第三，如果两个对象equals(Object o)方法是不相等，则hashCode方法值不要求相等，但在这种情况下尽量确保hashCode不同，以提升性能。
 
 同时注释部分还有这样一段描述：
-`
+```
 As much as is reasonably practical, 
 the hashCode method defined by class Object does return distinct integers for distinct objects. 
 (This is typically implemented by converting the internal address of the object into an integer, 
 but this implementation technique is not required by the Java™ programming language.)
-`
+```
+**谷歌翻译：**
+在相当实用的情况下，类 Object 定义的 hashCode 方法确实会为不同的对象返回不同的整数。 （这通常是通过将对象的内部地址转换为整数来实现的，但 Java™ 编程语言不需要这种实现技术。）
+
 通过上面的描述我们知道，一般情况下hashCode是通过对象的内存地址映射过来的。这也应该就是开篇说的“hashCode是根据对象地址生成的”的来源吧。
 
 但我们知道，JVM进行GC操作时，无论是标记复制算法还是标记整理算法，对象的内存地址都是会变的。但hashcode又要求保持不变，JVM到底是如何实现这一功能的呢？另外还有一个问题，如果一个对象被移动到了另外一个位置，而它原来的位置被其他对象填充了，那新填充的对象是否会与之前的对象hashCode相同呢？
@@ -258,7 +265,13 @@ Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
 
 经过本文的分析，我们会发现针对GC移动对象导致hashCode变化这个问题，在JVM未使用对象内存地址生成hashcode时已经不是什么问题了。但在探索这个问题的过程中，我们了解了hashcode的生成、存储以及与identityHashCode方法的关系，最后来实践了JOL的新用法，反而收获了更多。
 
+————————————————
+
+版权声明：本文为CSDN博主「程序新视界」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/wo541075754/article/details/115497869
+
 ## jdk中Hashcode方法的具体实现 及 如何在openjdk中查找native方法具体实现实例
+
 1.查找java.lang.Object，切换到Object.class文件所在目录，
 执行 javah -jni java.lang.Object，得到java_lang_Object.h文件，文件内容如下：
 ```h
@@ -586,3 +599,103 @@ _hashStateZ = 0x8767 ;    // (int)(3579807591LL & 0xffff) ;
 _hashStateW = 273326509 ;
 ```
 可以看到object的hashcode方法最终生成的hashcode实际上由线程和jdk中的hashcode参数决定，和内存地址无必然关系。
+
+————————————————
+
+版权声明：本文为CSDN博主「fengting1995」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/fengting1995/article/details/121186166
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chrome网页翻译测试</title>
+</head>
+<body>
+<div>
+    <div style="display:flex;column-gap:10px;">
+        <div style="flex:1;">
+            <label style="font-size:.85em;">※ 输入英文</label>
+            <label>
+                <textarea placeholder="输入英文" style="display:block;padding:10px;border:2px solid #666;border-radius:5px;box-sizing:border-box;width:100%;resize: vertical;">Hello World!</textarea>
+            </label>
+        </div>
+        <div style="flex:1;">
+            <label style="font-size:.85em;">※ 翻译结果</label>
+            <label>
+                <textarea placeholder="翻译结果" style="display:block;padding:10px;border:2px solid #666;border-radius:5px;box-sizing:border-box;width:100%;resize: vertical;"></textarea>
+            </label>
+        </div>
+    </div>
+    <div style="margin-top:10px;">
+        <input type="submit" value="测试一下" style="margin:0 auto;padding:5px 10px;border:1px solid #ccc;border-radius:5px;width:100%;">
+    </div>
+</div>
+</body>
+<script>
+    window.onload = function(){
+        const input = document.querySelector('input');
+        input.onclick = function (){
+            const xhr = new XMLHttpRequest();
+
+            const api = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&hl=en-US&dt=t&dt=bd&dj=1&source=icon&tk=294611.294611&q=";
+            const url = new URL(api);
+            url.searchParams.set('q', document.getElementsByTagName("textarea")[0].value);
+
+            xhr.open('post', url.href, true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+
+            document.getElementsByTagName("textarea")[1].value = "翻译中。。。";
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    const json = JSON.parse(xhr.responseText);
+                    let value = "";
+                    for(let i = 0; i < json.sentences.length; i++){
+                        value += json.sentences[i].trans;
+                    }
+                    document.getElementsByTagName("textarea")[1].value = value;
+                    console.log(json);
+                } else {
+                    document.getElementsByTagName("textarea")[1].value = "翻译出错。";
+                }
+            };
+            // 处理net::ERR_CONNECTION_TIMED_OUT
+            xhr.timeout = 5000; // 设置超时时间为 5000 毫秒
+            xhr.ontimeout = function () {
+                document.getElementsByTagName("textarea")[1].value = "请求 API 失败。";
+            };
+            xhr.send();
+        }
+
+
+        // input.addEventListener('click', (event) => {
+        //     event.preventDefault();
+        //
+        //     const token = "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";
+        //     send(token);
+        // });
+    }
+    function send(token){
+        document.getElementsByTagName("textarea")[1].value = "发送中。。。";
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('post', "https://api.openai.com/v1/completions", true);
+
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+
+        xhr.onload = function () {
+            if (xhr.status === 200) {
+                const json = JSON.parse(xhr.responseText);
+                document.getElementsByTagName("textarea")[1].value = json.choices[0].text;
+                console.log(json);
+            }
+        };
+
+        const value = document.getElementsByTagName("textarea")[0].value;
+        const json = {model: 'text-davinci-003', max_tokens: 2048, prompt: value};
+        //console.log(json);
+        xhr.send(JSON.stringify(json));
+    }
+</script>
+</html>
