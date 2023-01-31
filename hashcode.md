@@ -606,3 +606,151 @@ _hashStateW = 273326509 ;
 
 版权声明：本文为CSDN博主「fengting1995」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
 原文链接：https://blog.csdn.net/fengting1995/article/details/121186166
+
+## Java 中hashcode存储的位置
+存储在对象头markWord，如下图（深入理解Java虚拟机）
+
+**HotSpot 虚拟机对象头 Mark Word**
+
+| 存储内容                | 标志位 | 状态        |
+|:--------------------|-----|-----------|
+| 对象哈希码、对象分待年龄        | 01  | 未锁定       |
+| 指向锁记录的指针            | 00  | 轻量级锁定     |
+| 指向重量级锁指针            | 10  | 膨胀（重量级锁定） |
+| 空，不需要记录信息           | 11  | GC标记      |
+| 偏向线程ID、偏向时间戳、对象分代年龄 | 01  | 可偏向       |
+
+**Java中HashCode的实现：**
+
+在Java中Object.class中有hashCode方法，方法是 native 方法，实现就是在JVM中实现的，也就是说他是使用C语言实现的。
+实现方式：OpenJDK8 默认hashCode的计算方法是通过和当前线程有关的一个随机数+三个确定值，
+运用Marsaglia's xorshift scheme随机数算法得到的一个随机数。和对象内存地址无关。
+三个确定确定值分别是：
+```cpp
+// thread-specific hashCode stream generator state - Marsaglia shift-xor form
+  //随机数
+ _hashStateX = os::random() ;
+  //确定值1
+ _hashStateY = 842502087 ;
+   //确定值2
+ _hashStateZ = 0x8767 ;  // (int)(3579807591LL & 0xffff) 
+   //确定值3
+ _hashStateW = 273326509 ;
+```
+可以通过在JVM启动参数中添加-XX:hashCode=4，改变默认的hashCode计算方式。
+
+**2.Java Object.hashCode()返回的是对象内存地址？不是！**
+
+OpenJDK8 默认hashCode的计算方法是通过和当前线程有关的一个随机数+三个确定值，运用Marsaglia’s xorshift scheme随机数算法得到的一个随机数。
+和对象内存地址无关。
+
+当然也可以自己实现hashcode方法，关于hashcode() 与 equals()。主要是利用hashcode 可以判断2个对象的不等，hashcode相等，对象不一定相等，但hashcode不等，可以肯定2个对象不相等。
+在很多地方判断对象等不等。如果equals 定义了2个对象是相等的，需要注意hashcode还是不是相等的。
+
+2.使用JOL查看对象信息
+
+为了内存比较“整齐”，关闭压缩指针，启动参数加上-XX:-UseCompressedOops
+
+1.测试对象
+```java
+class AAA{
+    private int number;
+}
+```
+2.测试方式1
+```java
+public static void main(String[] args) {
+        AAA aaa = new AAA();
+        System.out.println("---------before invoke hascode()-----------------");
+        System.out.println(ClassLayout.parseInstance(aaa).toPrintable());
+
+        /*invoke hashcode() 转换成16进制*/
+        System.out.println(Integer.toHexString(aaa.hashCode()));
+        System.out.println("------------after invoke hascode()-----------------");
+        System.out.println(ClassLayout.parseInstance(aaa).toPrintable());
+
+synchronized (aaa){
+        System.out.println("---------in synchronized() func--------------");
+        System.out.println(Integer.toHexString(aaa.hashCode()));
+        System.out.println(ClassLayout.parseInstance(aaa).toPrintable());
+        System.out.println(Integer.toHexString(aaa.hashCode()));
+        }
+
+        System.out.println("---------after invoke  synchronized()--------------");
+        System.out.println(Integer.toHexString(aaa.hashCode()));
+        System.out.println(ClassLayout.parseInstance(aaa).toPrintable());
+
+        }
+```
+输出
+```
+---------before invoke hascode()-----------------
+AAA object internals:
+ OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+      0     4        (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)
+      4     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4        (object header)                           a8 35 85 1c (10101000 00110101 10000101 00011100) (478492072)
+     12     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+     16     4    int AAA.number                                0
+     20     4        (loss due to the next object alignment)
+Instance size: 24 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+7e0b37bc
+------------after invoke hascode()-----------------
+AAA object internals:
+ OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+      0     4        (object header)                           01 bc 37 0b (00000001 10111100 00110111 00001011) (188201985)
+      4     4        (object header)                           7e 00 00 00 (01111110 00000000 00000000 00000000) (126)
+      8     4        (object header)                           a8 35 85 1c (10101000 00110101 10000101 00011100) (478492072)
+     12     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+     16     4    int AAA.number                                0
+     20     4        (loss due to the next object alignment)
+Instance size: 24 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+---------in synchronized() func--------------
+7e0b37bc
+AAA object internals:
+ OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+      0     4        (object header)                           b0 f4 34 03 (10110000 11110100 00110100 00000011) (53802160)
+      4     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+      8     4        (object header)                           a8 35 85 1c (10101000 00110101 10000101 00011100) (478492072)
+     12     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+     16     4    int AAA.number                                0
+     20     4        (loss due to the next object alignment)
+Instance size: 24 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+
+7e0b37bc
+---------after invoke  synchronized()--------------
+7e0b37bc
+AAA object internals:
+ OFFSET  SIZE   TYPE DESCRIPTION                               VALUE
+      0     4        (object header)                           01 bc 37 0b (00000001 10111100 00110111 00001011) (188201985)
+      4     4        (object header)                           7e 00 00 00 (01111110 00000000 00000000 00000000) (126)
+      8     4        (object header)                           a8 35 85 1c (10101000 00110101 10000101 00011100) (478492072)
+     12     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)
+     16     4    int AAA.number                                0
+     20     4        (loss due to the next object alignment)
+Instance size: 24 bytes
+Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
+```
+可以看到，在调用一次 hashcode之后，就会在object header 中生成hashcode。注意区分大小端模式。
+
+![image-20210831084325075](img/hashcode/1570776081370-43ef6268-0f1d-4c3a-9b7d-9894dd3cee61.png)
+
+object header 在有锁的情况下会发生变化，但是不会改变hashcode的值。
+
+**为什么有锁的状态下，头部的hashcode会变。无锁后 又变回来了？**
+
+这是因为header会随着锁的状态发生变化。只有在无锁的情况下，才是这些字段。
+**unused:25 | identity_hashcode:31 | unused:1 | age:4 | biased_lock:1 | lock:2**
+
+另外，调用了一次hashcode 就会在栈帧中存在hashcode，
+但是与 偏向锁的字段发生冲突，因此jvm采用调用过hashcode的，不会存在偏向锁。
+为什么其它锁 可以呢？因为保存了指向栈中锁记录的指针，可以记录在里面。
+
+![image-20210831084325075](img/hashcode/1570782297262-ee25ccc2-9ee7-402b-9691-599d1aaf4b81.png)
+
+https://keeplooking.top/2020/04/21/Java/javahashcode/
