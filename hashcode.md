@@ -73,11 +73,13 @@ The memory address is 31856221536
 
 ## GC时对象地址变了，hashCode如何保持不变？
 **前言**
+
 前几天跟朋友交流，引出了一篇文章《GC复制存活对象，它内存地址变了么？》，我们得知在Hotspot虚拟机下，当GC发生时，对象的地址是会发生变化的。
 
 同时我们也知道，无论何时调用同一对象的hashCode方法，都必须返回相同的值，也就是说一个对象的hashCode值要在生命周期中保持不变。同时，网传“hashCode是根据对象地址生成的”。那么，问题来了，当对象地址变化了，hashCode如何保持不变呢？
 
 **HashCode的约定**
+
 在继续研究之前，我们先来看一下对hashCode方法的一些约定和说明。
 
 在java.lang.Object的JavaDoc注释上对hashCode方法有三项约定，概括来说就是：
@@ -102,6 +104,7 @@ but this implementation technique is not required by the Java™ programming lan
 下面我们就来探究一下JVM的实现。
 
 **GC前后的hashCode值**
+
 我们先通过一个实例来验证一下GC前后对象地址和hashcode值的变化。在项目中引入JOL依赖：
 ```java
 <dependency>
