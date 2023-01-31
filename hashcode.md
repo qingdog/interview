@@ -102,7 +102,7 @@ the hashCode method defined by class Object does return distinct integers for di
 but this implementation technique is not required by the Java™ programming language.)
 ```
 **谷歌翻译：**
-* https://github.com/qingdog/interview/blob/master/resources/translate.html
+* https://qingdog.github.io/interview/translate.html
 
 在相当实用的情况下，类 Object 定义的 hashCode 方法确实会为不同的对象返回不同的整数。 （这通常是通过将对象的内部地址转换为整数来实现的，但 Java™ 编程语言不需要这种实现技术。）
 
