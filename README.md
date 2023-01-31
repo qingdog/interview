@@ -842,7 +842,7 @@ public class HashMapMutableKey {
 * 如果重写了hashCode方法，一般也要重写equals方法，保证它们的定义一致。
 
 **对象哈希码md**
-* https://github.com/qingdog/interview/hashcode.md
+* https://github.com/qingdog/interview/blob/master/hashcode.md
 
 ## 11. 单例模式
 
