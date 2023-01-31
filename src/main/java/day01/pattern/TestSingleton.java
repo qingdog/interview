@@ -19,7 +19,7 @@ public class TestSingleton {
         // 反序列化破坏单例
 //        serializable(Singleton3.getInstance());
 
-        // Unsafe 破坏单例
+        // Unsafe 破坏单例（未找到阻止方法）
 //        unsafe(Singleton3.class);
     }
 

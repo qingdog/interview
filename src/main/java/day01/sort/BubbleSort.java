@@ -34,7 +34,6 @@ public class BubbleSort {
         int n = a.length - 1;
         while (true) {
             int last = 0;
-
             for(int i = 0;i < n;i++){
                 System.out.println("比较次数" + i);
                 if(a[i] > a[i+1]){
