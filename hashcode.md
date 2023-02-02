@@ -745,7 +745,7 @@ Space losses: 0 bytes internal + 4 bytes external = 4 bytes total
 ```
 可以看到，在调用一次 hashcode之后，就会在object header 中生成hashcode。注意区分大小端模式。
 
-![image-20210831084325075](img/hashcode/1570776081370-43ef6268-0f1d-4c3a-9b7d-9894dd3cee61.png)
+![image](img/hashcode/1570776081370-43ef6268-0f1d-4c3a-9b7d-9894dd3cee61.png)
 
 object header 在有锁的情况下会发生变化，但是不会改变hashcode的值。
 
@@ -758,10 +758,9 @@ object header 在有锁的情况下会发生变化，但是不会改变hashcode�
 但是与 偏向锁的字段发生冲突，因此jvm采用调用过hashcode的，不会存在偏向锁。
 为什么其它锁 可以呢？因为保存了指向栈中锁记录的指针，可以记录在里面。
 
-![image-20210831084325075](img/hashcode/1570782297262-ee25ccc2-9ee7-402b-9691-599d1aaf4b81.png)
+![image](img/hashcode/1570782297262-ee25ccc2-9ee7-402b-9691-599d1aaf4b81.png)
 
 https://keeplooking.top/2020/04/21/Java/javahashcode/
-<<<<<<< HEAD
 
 ## 补充基础hashcode什么情况下会改变
 ```java
@@ -829,5 +828,3 @@ public class HashMapMutableKey {
     }
 }
 ```
-=======
->>>>>>> 8de34b7360994809c2e073ca6b97cbc208e937ce

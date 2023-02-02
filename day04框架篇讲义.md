@@ -1270,6 +1270,8 @@ public class TestService7 {
             latch.countDown();
         }, "t2", "boldBlue").start();
 
+//        CountDownLatch（倒数锁存器）允许一个或多个线程等待其他线程完成操作。
+//        这里的作用是：在两个线程t1和t2中分别调用bean的transfer()方法后，等待两个线程执行完成后再打印账户1的余额。
         latch.await();
         System.out.println(bean.findBalance(1));
     }
