@@ -6,6 +6,8 @@ package day02;
 //jdk8
 import sun.misc.Unsafe;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 
 // --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
 public class SyncVsCas {
@@ -94,5 +96,12 @@ public class SyncVsCas {
         cas(account);
     }*/
 
+    private AtomicReference<Object> value = new AtomicReference<>(new Object());
+    public Object getValue() {
+        return value.get();
+    }
+    public boolean update(Object expectedValue, Object newValue) {
+        return value.compareAndSet(expectedValue, newValue);
+    }
 
 }

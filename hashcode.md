@@ -150,6 +150,7 @@ public class TestHashCode {
 }
 ```
 上述代码执环境为Hotspot虚拟机，执行时如果未出现GC，则可将JVM参数设置的小一点，
+
 比如可以设置为16M：-Xms16m -Xmx16m -XX:+PrintGCDetails。
 
 执行上述代码，打印日志如下：
@@ -177,12 +178,12 @@ hash code = true
 
 不同的JVM对hashcode值的生成方式不同。Open JDK中提供了6中生成hash值的方法。
 
-0：随机数生成器（A randomly generated number.）；
-1：通过对象内存地址的函数生成（A function of memory address of the object.）；
-2：硬编码1（用于敏感度测试）（A hardcoded 1 (used for sensitivity testing.)）；
-3：通过序列（A sequence.）；
-4：对象的内存地址，强制转换为int。（The memory address of the object, cast to int.）
-5：线程状态与xorshift结合（Thread state combined with xorshift）；
+* 0：随机数生成器（A randomly generated number.）；
+* 1：通过对象内存地址的函数生成（A function of memory address of the object.）；
+* 2：硬编码1（用于敏感度测试）（A hardcoded 1 (used for sensitivity testing.)）；
+* 3：通过序列（A sequence.）；
+* 4：对象的内存地址，强制转换为int。（The memory address of the object, cast to int.）
+* 5：线程状态与xorshift结合（Thread state combined with xorshift）；
 
 其中在OpenJDK6、7中使用的是随机数生成器的（第0种）方式，OpenJDK8、9则采用第5种作为默认的生成方式。所以，单纯从OpenJDK的实现来说，其实hashcode的生成与对象内存地址没有什么关系。而Object类中hashCode方法上的注释，很有可能是早期版本中使用到了第4种方式。
 
@@ -758,3 +759,70 @@ object header 在有锁的情况下会发生变化，但是不会改变hashcode�
 ![image-20210831084325075](img/hashcode/1570782297262-ee25ccc2-9ee7-402b-9691-599d1aaf4b81.png)
 
 https://keeplooking.top/2020/04/21/Java/javahashcode/
+
+## 补充基础hashcode什么情况下会改变
+```java
+public class HashMapMutableKey {
+    public static void main(String[] args) {
+        HashMap<Student, Object> map = new HashMap<>();
+        Student stu = new Student("张三", 18);
+        map.put(stu, new Object());
+
+        System.out.println(map.get(stu));
+
+        stu.age = 19;
+
+        Object obj = stu;
+//        stu = null;
+        System.out.println(map.get(stu));
+
+        System.out.println(map.get(obj));
+        System.out.println("Identity Hashcode = " + System.identityHashCode(obj));
+
+        // 重写hashcode不是必须的，之所以要重写该方法是因为重写了equals方法需要
+        // 在对象地址不相同的情况下继续比较两个对象的值是否相等
+        Student stu2 = new Student("张三", 18);
+        System.out.println(stu.equals(stu2));
+    }
+
+    static class Student {
+        String name;
+        int age;
+
+        public Student(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Student student = (Student) o;
+            return age == student.age && Objects.equals(name, student.name);
+        }
+
+        // 若没有重写hashcode的方法，对象的值的变化不会导致hashcode改变（可以使用对象作为Map的key）
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, age);
+        }
+    }
+}
+```

@@ -12,7 +12,18 @@ public class HashMapMutableKey {
         System.out.println(map.get(stu));
 
         stu.age = 19;
+
+        Object obj = stu;
+//        stu = null;
         System.out.println(map.get(stu));
+
+        System.out.println(map.get(obj));
+        System.out.println("Identity Hashcode = " + System.identityHashCode(obj));
+
+        // 重写hashcode不是必须的，之所以要重写该方法是因为重写了equals方法需要
+        // 在对象地址不相同的情况下继续比较两个对象的值是否相等
+        Student stu2 = new Student("张三", 18);
+        System.out.println(stu.equals(stu2));
     }
 
     static class Student {
@@ -48,6 +59,7 @@ public class HashMapMutableKey {
             return age == student.age && Objects.equals(name, student.name);
         }
 
+        // 若没有重写hashcode的方法，对象的值的变化不会导致hashcode改变（可以使用对象作为Map的key）
         @Override
         public int hashCode() {
             return Objects.hash(name, age);

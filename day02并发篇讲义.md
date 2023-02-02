@@ -35,7 +35,7 @@
   * 当获取锁成功后，但由于条件不满足，调用了 wait(long) 方法，此时从**可运行**状态释放锁进入 Monitor 等待集合进行**有时限等待**，同样不占用 cpu 时间
   * 当其它持锁线程调用 notify() 或 notifyAll() 方法，会按照一定规则唤醒等待集合中的**有时限等待**线程，恢复为**可运行**状态，并重新去竞争锁
   * 如果等待超时，也会从**有时限等待**状态恢复为**可运行**状态，并重新去竞争锁
-  * 还有一种情况是调用 sleep(long) 方法也会从**可运行**状态进入**有时限等待**状态，但与 Monitor 无关，不需要主动唤醒，超时时间到自然恢复为**可运行**状态
+  * 还有一种情况是调用 sleep(long) 方法也会从**可运行**状态进入**有时限等待**状态，但与 Monitor（监视器） 无关，不需要主动唤醒，超时时间到自然恢复为**可运行**状态
 
 
 * wating等待，执行notify后要去争抢锁，拿到锁后进入可运行状态，否则阻塞线程。
@@ -237,6 +237,143 @@
   * 其核心思想是【无需加锁，每次只有一个线程能成功修改共享变量，其它失败的线程不需要停止，不断重试直至成功】
   * 由于线程一直运行，不需要阻塞，因此不涉及线程上下文切换
   * 它需要多核 cpu 支持，且线程数不应超过 cpu 核数
+```java
+// 在JDK9之后，sun.misc.Unsafe被移动到jdk.unsupported模块中，同时在java.base模块克隆了一个jdk.internal.misc.Unsafe类
+// 代替了JDK8以前的sun.misc.Unsafe的功能，jdk.internal包不开放给开发者调用。
+//import jdk.internal.misc.Unsafe;
+//jdk8
+import sun.misc.Unsafe;
+
+
+// --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
+public class SyncVsCas {
+  static final Unsafe UNSAFE_9 = Unsafe.getUnsafe();
+  // CAS 操作需要知道要操作的字段的内存地址
+  static final long BALANCE = UNSAFE_9.objectFieldOffset(Account.class, "balance");
+  // 在指定的类中查找指定的字段，并返回该字段在内存中的偏移量
+    Unsafe.getUnsafe().objectFieldOffset(Account.class, "balance")
+
+  static class Account {
+    // 进行 CAS 操作时通常需要加 volatile 修饰变量，保证该字段的可见性和有序性。
+    volatile int balance = 10; // 余额
+  }
+
+  private static void showResult(Account account, Thread t1, Thread t2) {
+    try {
+      t1.start();
+      t2.start();
+      t1.join();
+      t2.join();
+      LoggerUtils.get().debug("{}", account.balance);
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
+  }
+
+  public static void sync(Account account) {
+    Thread t1 = new Thread(() -> {
+      synchronized (account) {
+        int old = account.balance;
+        int n = old - 5;
+        account.balance = n;
+      }
+    },"t1");
+
+    Thread t2 = new Thread(() -> {
+      synchronized (account) {
+        int o = account.balance;
+        int n = o + 5;
+        account.balance = n;
+      }
+    },"t2");
+
+    showResult(account, t1, t2);
+  }
+
+  public static void cas(Account account) {
+    Thread t1 = new Thread(() -> {
+      // 乐观锁
+      while (true) {
+        int o = account.balance;
+        int n = o - 5;
+        // 比较和设置CAS
+        if (UNSAFE_9.compareAndSetInt(account, BALANCE, o, n)) {
+          break;
+        }
+      }
+    },"t1");
+
+    Thread t2 = new Thread(() -> {
+      while (true) {
+        int o = account.balance;
+        int n = o + 5;
+        if (UNSAFE_9.compareAndSetInt(account, BALANCE, o, n)) {
+          break;
+        }
+      }
+    },"t2");
+
+    showResult(account, t1, t2);
+  }
+
+  private static void basicCas(Account account) {
+    while (true) {
+      int o = account.balance;
+      int n = o + 5;
+      if(UNSAFE_9.compareAndSetInt(account, BALANCE, o, n)){
+        break;
+      }
+    }
+    System.out.println(account.balance);
+  }
+
+  public static void main(String[] args) {
+    Account account = new Account();
+    cas(account);
+  }
+}
+```
+该方法会比较 expectedValue 和当前引用所指向的值，如果相同，则将该引用设置为 newValue。
+```java
+import java.util.concurrent.atomic.AtomicReference;
+
+public class OptimisticLock {
+    private AtomicReference<Object> value = new AtomicReference<>(new Object());
+
+    public Object getValue() {
+        return value.get();
+    }
+
+    public boolean update(Object expectedValue, Object newValue) {
+        return value.compareAndSet(expectedValue, newValue);
+    }
+}
+```
+```java
+import groovy.lang.GroovyShell;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
+// -XX:MaxMetaspaceSize=24m
+// 模拟不断生成类, 但类无法卸载的情况
+public class TestOomTooManyClass {
+
+//    static GroovyShell shell = new GroovyShell();
+
+    public static void main(String[] args) {
+        AtomicInteger atomicInteger = new AtomicInteger();
+        while (true) {
+            try (FileReader reader = new FileReader("script")) {
+                GroovyShell shell = new GroovyShell();
+                shell.evaluate(reader);
+                System.out.println(atomicInteger.incrementAndGet());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+```
 
 **monitor监控（线程阻塞状态）**
 
@@ -382,3 +519,121 @@ ThreadLocalMap 中的 key 被设计为弱引用，原因如下
   * 会同时释放 key，value 的内存，也会清除临近的 null key 的 value 内存
   * 推荐使用它，因为一般使用 ThreadLocal 时都把它作为静态变量（即强引用），因此无法被动依靠 GC 回收
 
+记录线程池lambda
+```java
+public class TestThreadPoolExecutor {
+
+    public static void main(String[] args) throws InterruptedException {
+        AtomicInteger c = new AtomicInteger(1);
+        // 数组阻塞队列
+        ArrayBlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(2);
+        ThreadPoolExecutor threadPool = new ThreadPoolExecutor(
+                2,
+                3,
+                0, // 救急线程的生存时间，生存时间内没有新任务，此线程资源会释放
+                TimeUnit.MILLISECONDS,
+                queue,
+                // ThreadFactory 是一个接口，它提供了一个 newThread 方法，用来创建新的线程。 lambda 表达式实际上就是实现了这个方法。
+                // 其中 new Thread(r, "myThread" + c.getAndIncrement()) 将runnable r作为参数传入，创建了一个新线程并启动了它。
+                r -> new Thread(r, "myThread" + c.getAndIncrement()),
+                new ThreadPoolExecutor.DiscardOldestPolicy());
+        Thread thread = new Thread("myThread" + c.getAndIncrement());
+
+        // Thread(Runnable target, String name)
+
+        // 声明具体接口类型 确定lambda表达式所表示的具体抽象方法
+        Runnable rr = () -> {};
+
+        // 错误的写法，传入的参数Runnable r没有起到任何作用。实现该接口时应该使用方法里的固定的参数（Runnable r）实现约定的抽象方法（返回Thread对象）
+        ThreadFactory threadFactory1 = r -> new Thread(() -> {},"");
+        // 同样是错误的
+        ThreadFactory threadFactory11 = r -> new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println();
+            }
+        }, "");
+
+
+        // 正确的写法t2和t22。对于有参数的抽象方法可省略小括号（直接定义参数名r箭头指向->方法体），一行代码返回时可省略大括号{}和里面的return。
+        ThreadFactory t2 = r -> {System.out.println(true);return new Thread(r, "");};
+        ThreadFactory t22 = new ThreadFactory() {
+            @Override
+            public Thread newThread(@NotNull Runnable r) {
+                return new Thread(r ,"");
+            }
+        };
+
+        Thread thread1 = new Thread("");
+        ThreadFactory threadFactory3 = r -> new Thread("");
+
+        // Thread(Runnable target, String name) {
+        Thread t222 = new Thread(() -> {logger1.debug("before waiting"); },"");
+
+        showState(queue, threadPool);
+        threadPool.submit(new MyTask("1", 3600000));
+        showState(queue, threadPool);
+        threadPool.submit(new MyTask("2", 3600000));
+        showState(queue, threadPool);
+        threadPool.submit(new MyTask("3"));
+        showState(queue, threadPool);
+        threadPool.submit(new MyTask("4"));
+        showState(queue, threadPool);
+        threadPool.submit(new MyTask("5", 3600000));
+        showState(queue, threadPool);
+        threadPool.submit(new MyTask("6"));
+        showState(queue, threadPool);
+    }
+
+    private static void showState(ArrayBlockingQueue<Runnable> queue, ThreadPoolExecutor threadPool) {
+        try {
+            Thread.sleep(300);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        List<Object> tasks = new ArrayList<>();
+        for (Runnable runnable : queue) {
+            try {
+                Field callable = FutureTask.class.getDeclaredField("callable");
+                callable.setAccessible(true);
+                Object adapter = callable.get(runnable);
+                Class<?> clazz = Class.forName("java.util.concurrent.Executors$RunnableAdapter");
+                Field task = clazz.getDeclaredField("task");
+                task.setAccessible(true);
+                Object o = task.get(adapter);
+                tasks.add(o);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        main.debug("pool size: {}, queue: {}", threadPool.getPoolSize(), tasks);
+    }
+
+    static class MyTask implements Runnable {
+        private final String name;
+        private final long duration;
+
+        public MyTask(String name) {
+            this(name, 0);
+        }
+
+        public MyTask(String name, long duration) {
+            this.name = name;
+            this.duration = duration;
+        }
+        @Override
+        public void run() {
+            try {
+                LoggerUtils.get("myThread").debug("running..." + this);
+                Thread.sleep(duration);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        @Override
+        public String toString() {
+            return "MyTask(" + name + ")";
+        }
+    }
+}
+```
