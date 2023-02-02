@@ -1012,7 +1012,8 @@ public class Singleton4 implements Serializable {
 }
 ```
 
-为何必须加 volatile：
+为何必须加 volatile：（synchronized同步代码块外面使用了第二次检查）
+
 
 * 创建对象生成唯一实例时不是原子的
 * `INSTANCE = new Singleton4()` 不是原子的，分成 3 步：创建对象、调用构造、给静态变量赋值，其中后两步可能被指令重排序优化，变成先赋值、再调用构造

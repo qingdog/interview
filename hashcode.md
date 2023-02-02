@@ -1,3 +1,5 @@
+theme: minima
+
 ## GC复制存活对象，它内存地址变了么？
 **前言**
 
@@ -759,6 +761,7 @@ object header 在有锁的情况下会发生变化，但是不会改变hashcode�
 ![image-20210831084325075](img/hashcode/1570782297262-ee25ccc2-9ee7-402b-9691-599d1aaf4b81.png)
 
 https://keeplooking.top/2020/04/21/Java/javahashcode/
+<<<<<<< HEAD
 
 ## 补充基础hashcode什么情况下会改变
 ```java
@@ -826,3 +829,5 @@ public class HashMapMutableKey {
     }
 }
 ```
+=======
+>>>>>>> 8de34b7360994809c2e073ca6b97cbc208e937ce
