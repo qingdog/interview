@@ -30,6 +30,40 @@ public class InsertSort {
     }
 
     public static void insert2(int[] a){
+        String payRecord = "";
+//        String s = "{" +
+//                " \"out_trade_no\":\""+payRecord+"\"," +
+//                " \"total_amount\":\""+payRecord"\"," +
+//                " \"subject\":\""+payRecord+"\"," +
+//                " \"product_code\":\"QUICK_WAP_PAY\"" +
+//                " }";
+//        alipayRequest.setBizContent();//填充业务参数
+
+        String bizContent="{\"out_trade_no\":\""+ payRecord +"\","
+                + "\"total_amount\":\""+ payRecord +"\","
+                + "\"subject\":\""+ payRecord +"\","
+                + "\"body\":\""+ payRecord +"\","
+                + "\"goods_type\":\""+ payRecord +"\","
+                + "\"merchant_order_no\":\""+ payRecord +"\","
+                //     + "\"goods_detail\":[{\"goods_id\":\""+ id +"\",\"goods_name\":\""+ kind +"\"}],"
+                + "\"product_code\":\"FAST_INSTANT_TRADE_PAY\"}";
+        new String("{" +
+                " \"out_trade_no\":\""+payRecord+"\"," +
+                " \"total_amount\":\""+payRecord+"\"," +
+                " \"subject\":\""+payRecord+"\"," +
+                " \"product_code\":\"QUICK_WAP_PAY\"" +
+                " }");//填充业务参数\
+
+        new String("{" +
+                " \"out_trade_no\":\""+payRecord+"\"," +
+                " \"total_amount\":\""+payRecord+"\"," +
+                " \"subject\":\""+payRecord+"\"," +
+                " \"product_code\":\"QUICK_WAP_PAY\"" +
+                " }");//填充业务参数\
+
+//        alipayRequest.setBizContent(bizContent);
+
+
         for (int i = 1; i< a.length; i++) {
             int in = a[i];
             int j = i;

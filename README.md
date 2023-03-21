@@ -821,6 +821,7 @@ public class HashMapMutableKey {
   * 即 $2^5  ∗h -h$
   * 即 $h≪5  -h$
   
+
 **默认对象计算哈希值**
 
 * Object 类中的 hashCode 方法默认实现是使用了一种叫做 "System.identityHashCode" 的方法来计算对象的哈希值。
@@ -1063,6 +1064,11 @@ public class Singleton5 implements Serializable {
   * EmptyListIterator（双向迭代器）
   * EmptyEnumeration
 * ReverseComparator.REVERSE_ORDER（反向比较器）
-
 * 饿汉式EmptySet\EmptyList\EmptyMap
 * Comparators.NaturalOrderComparator.INSTANCE 枚举饿汉式单例（自然顺序比较器）
+
+
+
+---
+
+满一航 满老师
