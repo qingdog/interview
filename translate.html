@@ -57,23 +57,25 @@
 					if (xhr.status === 200) {
 						const json = JSON.parse(xhr.responseText);
 						let value = "";
-						for(let i = 0; i < json.sentences.length; i++){
+						for (let i = 0; i < json.sentences.length; i++){
 							value += json.sentences[i].trans;
 						}
 						document.getElementsByTagName("textarea")[1].value = value;
 						console.log(json);
 					} else {
+						// 处理浏览器请求连接超时 net::ERR_CONNECTION_TIMED_OUT
 						document.getElementsByTagName("textarea")[1].value = "翻译请求出错。";
 						console.warn(xhr);
 					}
 				}
 			};
             
-			// 处理net::ERR_CONNECTION_TIMED_OUT
-			xhr.timeout = 5000; // 设置超时时间为 5 秒
+			// 设置超时时间为 5 秒视为错误停止请求
+			xhr.timeout = 5000; 
 			xhr.ontimeout = function () {
 				document.getElementsByTagName("textarea")[1].value = "请求 API 超时。";
 			};
+			
 			xhr.send();
         }
 
