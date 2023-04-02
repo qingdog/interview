@@ -74,6 +74,7 @@
 			xhr.timeout = 5000; 
 			xhr.ontimeout = function () {
 				document.getElementsByTagName("textarea")[1].value = "请求 API 超时。";
+				console.warn("请求超过5s！");
 			};
 			
 			xhr.send();
