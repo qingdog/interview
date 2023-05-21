@@ -150,8 +150,7 @@
   * 公平锁是指**未处于阻塞队列**中的线程来争抢锁，如果队列不为空，则老实到队尾等待
   * 非公平锁是指**未处于阻塞队列**中的线程来争抢锁，与队列头唤醒的线程去竞争，谁抢到算谁的
 * 公平锁会降低吞吐量，一般不用
-*
-*
+
 **ReentrantLock可重入锁**
 
 * ReentrantLock 中的条件变量功能类似于普通 synchronized 的 wait，notify，用在当线程获得锁后，发现条件不满足时，临时等待的链表结构
@@ -191,7 +190,6 @@
 
 * 起因：由于**编译器优化、或缓存优化、或 CPU 指令重排序优化**导致的对共享变量所做的修改另外的线程看不到
 * 解决：用 volatile 修饰共享变量，能够防止编译器等优化发生，让一个线程对共享变量的修改对另一个线程可见
-*
 * jit热点代码优化（-Xint（jvm参数）不使用jit进行解释10倍到100倍）
 * 循环超过阈值时，会优化代码进行编译，之后不再从内存中读取源码编译。
 * volatile不优化相差10倍循环次数
@@ -214,8 +212,6 @@
 >   * 需要打成 jar 包后测试
 > * 请同时参考视频讲解
 
-*
-*
 * 对于写操作不能越过屏障重新排序到下面，可以先执行屏障下面的指令
 * 写入用volatite修饰的变量时应该放下面
 * 读操作不能往上读（返过来）
@@ -243,7 +239,6 @@
 //import jdk.internal.misc.Unsafe;
 //jdk8
 import sun.misc.Unsafe;
-
 
 // --add-opens java.base/jdk.internal.misc=ALL-UNNAMED
 public class SyncVsCas {
@@ -485,7 +480,6 @@ ConcurrentHashMap(int initialCapacity, float loadFactor, int concurrencyLevel)
 
 * ThreadLocal 可以实现【资源对象】的线程隔离，让每个线程各用各的【资源对象】，避免争用引发的线程安全问题
 * ThreadLocal 同时实现了线程内的资源共享
-*
 * ThreadLocal不同线程间隔离，同一个线程共享变量。
 
 **原理**

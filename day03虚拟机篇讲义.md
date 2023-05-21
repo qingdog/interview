@@ -754,9 +754,70 @@ public class TestWeakReference {
         }
     }
 }
-
 ```
 
+> 执行结果：
+>
+> [a:1,b:2,c:3,d:4]
+> null
+> 2
+> null
+> null
+> [null:1,b:2,null:3,null:4]
+> day03.reference.TestWeakReference$MyWeakMap$Entry@b81eda8
+> day03.reference.TestWeakReference$MyWeakMap$Entry@68de145
+> day03.reference.TestWeakReference$MyWeakMap$Entry@27fa135a
+> [b:2]
+>
+> 进程已结束,退出代码0
+>
+> 总结一下：
+> 在MyWeakMap类中，Entry类继承了WeakReference<String>，其中使用了弱引用来持有键（key）。通过将键包装在Entry对象中并使用弱引用，可以实现在没有强引用持有键时，键所对应的Entry对象可以被垃圾回收器回收。
+> 在调用gc，由于软引用的键new string acd 和字符串b都是强引用，所以都不会被回收，可以获取到数据。
+>
+> 转换一下就是：当对象只被弱引用引用时，如果垃圾回收器扫描到这个对象时发现只有弱引用指向它，那么该对象就会被标记为可回收，并在适当的时机被垃圾回收器回收。
+> 由于都拥有强引用，所以不能被回收。
+>
+> 1. 在给定的代码中，字符串 `"b"` 是一个强引用对象，而不是一个弱引用对象或可引用对象。
+>
+>    通过 `map.put(1, "b", "2")` 将字符串 `"b"` 直接作为键传递给了 `put` 方法，它不会被包装在弱引用或其他特殊引用对象中。因此，字符串 `"b"` 是一个强引用对象，其生命周期与持有它的变量或数据结构相关联。
+>
+>    弱引用对象是指在没有其他强引用持有它时可以被垃圾回收器回收的对象。在给定的代码中，并没有使用弱引用来包装字符串 `"b"`，因此它不属于弱引用对象。
+>
+>    可引用对象是一个更广义的概念，它包括强引用对象、软引用对象、弱引用对象和虚引用对象。在给定的代码中，并没有使用任何引用类型来包装字符串 `"b"`，所以它也不属于可引用对象。
+>
+>    综上所述，在给定的代码中，字符串 `"b"` 是一个强引用对象，它的生命周期取决于具体的引用和使用方式。它不是一个弱引用对象或可引用对象。
+>
+> 2. 弱引用的作用是确保在没有其他强引用持有对象时，对象可以被垃圾回收器回收。对于字符串常量来说，它们是被 JVM 管理的共享资源，存在于常量池中，并且可以被多个引用共享。因此，字符串常量不需要使用弱引用来确保垃圾回收。
+> 3. 所以该Entry对象不会进入引用队列，可以看到最终打印结果：[b:2]
+> 4. 如果把`map.put(0, new String("a"), "1");`改成`String a = new String("a");map.put(0, a, "1");`该Entry也不会被回收。
+>
+> 最终：弱引用自身需要配合引用队列来释放，像软引用一样。
+>
+> ```Java
+> static ReferenceQueue<Object> queue = new ReferenceQueue<>();// 引用队列
+> static class Entry extends WeakReference<String> {
+>     String value;
+>     public Entry(String key, String value) {
+>         super(key, queue);// 入队
+>         this.value = value;
+>     }
+> }
+> public void clean() {
+>     Object ref;
+>     while ((ref = queue.poll()) != null) {// 检查引用队列中是否有可用的引用对象，并将其从队列中移除并返回。
+>         System.out.println(ref);
+>         for (int i = 0; i < table.length; i++) {
+>             if(table[i] == ref) {
+>                 table[i] = null;// 将整个Entry设为null，等待垃圾回收
+>             }
+>         }
+>     }
+> }
+> Entry[] table = new Entry[4];// 缓存
+> ```
+>
+> 
 
 **虚引用（PhantomReference）**
 

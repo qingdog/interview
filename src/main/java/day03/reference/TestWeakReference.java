@@ -11,6 +11,8 @@ public class TestWeakReference {
         map.put(1, "b", "2");
         map.put(2, new String("c"), "3");
         map.put(3, new String("d"), "4");
+        String e = new String("e");
+        map.put(4, e, "5");
         System.out.println(map);
 
         System.gc();
@@ -46,7 +48,7 @@ public class TestWeakReference {
             }
         }
 
-        Entry[] table = new Entry[4];
+        Entry[] table = new Entry[5];
 
         public void put(int index, String key, String value) {
             table[index] = new Entry(key, value);

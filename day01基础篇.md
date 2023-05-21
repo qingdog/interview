@@ -146,8 +146,7 @@ public static void bubble_v2(int[] a) {
             }
         }
         n = last;
-        System.out.println("第轮冒泡"
-                           + Arrays.toString(a));
+        System.out.println("第轮冒泡" + Arrays.toString(a));
         if (last == 0) {
             break;
         }
@@ -274,7 +273,7 @@ public static void insert2(int[] a){
         int j = i;
         for (; j >= 1; j--) {
             if (in < a[j-1]) {
-                // 交换（插入）
+                // 前覆盖后
                 a[j] = a[j-1];
             } else {
                 // 稳定
@@ -505,6 +504,14 @@ private static int partition(int[] a, int l, int h) {
 > * day01.sort.QuickSortHoare 演示了霍尔分区的实现
 > * day01.sort.LomutoVsHoare 对四种分区实现的移动次数比较
 
+```java
+public static void swap(int[] array, int i, int j) {
+	int t = array[i];
+    array[i] = array[j];
+    array[j] = t;
+}
+```
+
 
 
 ## 7. ArrayList
@@ -649,7 +656,7 @@ Fail-Fast 与 Fail-Safe
 
 **put 流程**
 
-1. HashMap 是懒惰创建数组的，首次使用才创建数组
+1. 是懒惰创建数组的，首次使用才创建数组
 2. 计算索引（桶下标）
 3. 如果桶下标还没人占用，创建 Node 占位返回
 4. 如果桶下标已经有人占用
